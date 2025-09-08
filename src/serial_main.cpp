@@ -68,6 +68,32 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Послідовний порт " << serialPort << " відкрито." << std::endl;
 
+    // Цикл для очікування вхідних даних
+    std::cout << "Очікування вхідних даних з потоку..." << std::endl;
+    bool data_received = false;
+    while (!data_received) {
+        // Набір файлових дескрипторів для select
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(fd, &readfds);
+
+        // Налаштування тайм-ауту (наприклад, 1 секунда)
+        struct timeval timeout;
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+
+        // Виклик select
+        int ready = select(fd + 1, &readfds, NULL, NULL, &timeout);
+
+        if (ready > 0 && FD_ISSET(fd, &readfds)) {
+            // Дані доступні для читання
+            data_received = true;
+        } else {
+            // Дані не надійшли, виводимо повідомлення знову
+            std::cout << "Все ще очікуємо..." << std::endl;
+        }
+    }
+
     // Створення потоку з файлового дескриптора. 
     // Це правильний спосіб роботи з послідовним портом.
     FILE* stream = fdopen(fd, "r");

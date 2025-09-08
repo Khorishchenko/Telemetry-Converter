@@ -288,7 +288,6 @@ void parseMspData(FILE* input) {
 }
 
 
-
 // Функція для відправки MAVLink-пакету по UDP
 void sendMavlinkPacketOverUdp(const uint8_t* buffer, uint16_t length, const std::string& ip_address, int port) {
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
