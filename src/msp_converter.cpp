@@ -12,6 +12,8 @@
 #include <mavlink.h> // Обов'язково для роботи з MAVLink-пакетами
 
 
+
+
 // Додаємо бібліотеки для роботи з мережею
 #include <sys/socket.h>
 #include <netinet/in.h>

@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 
+
 // Прототип для функції обчислення контрольної суми MSP
 uint8_t calculateMspChecksum(const std::vector<uint8_t>& data);
 

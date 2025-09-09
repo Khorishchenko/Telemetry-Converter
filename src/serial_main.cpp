@@ -79,6 +79,7 @@ int main(int argc, char* argv[]) {
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
+        
 
         // Налаштування тайм-ауту (наприклад, 1 секунда)
         struct timeval timeout;
