@@ -1,1 +1,0 @@
-/usr/bin/c++ -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/usr/local/Cellar/tcl-tk/9.0.1/lib CMakeFiles/TelemetryConverter_Serial.dir/src/serial_main.cpp.o CMakeFiles/TelemetryConverter_Serial.dir/src/msp_converter.cpp.o -o TelemetryConverter_Serial
