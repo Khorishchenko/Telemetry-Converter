@@ -70,9 +70,12 @@ int main(int argc, char* argv[]) {
 
     // Цикл для очікування вхідних даних
     std::cout << "Очікування вхідних даних з потоку..." << std::endl;
-    bool data_received = false;
-    while (!data_received) {
-        // Набір файлових дескрипторів для select
+
+
+    char buffer[256];
+
+    // Головний нескінченний цикл
+    while (true) {
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
@@ -82,31 +85,64 @@ int main(int argc, char* argv[]) {
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
 
-        // Виклик select
+        // Виклик select для перевірки наявності даних
         int ready = select(fd + 1, &readfds, NULL, NULL, &timeout);
 
         if (ready > 0 && FD_ISSET(fd, &readfds)) {
             // Дані доступні для читання
-            data_received = true;
+            ssize_t bytes_read = read(fd, buffer, sizeof(buffer));
+            
+            if (bytes_read > 0) {
+                // Виводимо отримані дані
+                std::cout.write(buffer, bytes_read);
+                // І передаємо їх для парсингу (якщо потрібно)
+                // parseMspData(buffer, bytes_read);
+            }
         } else {
-            // Дані не надійшли, виводимо повідомлення знову
-            std::cout << "Все ще очікуємо..." << std::endl;
+            // Дані не надійшли, продовжуємо чекати
+            // Можна виводити повідомлення, або просто чекати
         }
     }
 
-    // Створення потоку з файлового дескриптора. 
-    // Це правильний спосіб роботи з послідовним портом.
-    FILE* stream = fdopen(fd, "r");
-    if (!stream) {
-        std::cerr << "Помилка: не вдалося створити потік з послідовного порту." << std::endl;
-        close(fd);
-        return 1;
-    }
+    close(fd);
 
-    //  Передаємо створений потік у функцію парсингу
-    parseMspData(stream);
+    // bool data_received = false;
+    // while (!data_received) {
+    //     // Набір файлових дескрипторів для select
+    //     fd_set readfds;
+    //     FD_ZERO(&readfds);
+    //     FD_SET(fd, &readfds);
 
-    // Закриття потоку і файлового дескриптора
+    //     // Налаштування тайм-ауту (наприклад, 1 секунда)
+    //     struct timeval timeout;
+    //     timeout.tv_sec = 1;
+    //     timeout.tv_usec = 0;
+
+    //     // Виклик select
+    //     int ready = select(fd + 1, &readfds, NULL, NULL, &timeout);
+
+    //     if (ready > 0 && FD_ISSET(fd, &readfds)) {
+    //         // Дані доступні для читання
+    //         data_received = true;
+    //     } else {
+    //         // Дані не надійшли, виводимо повідомлення знову
+    //         std::cout << "Все ще очікуємо..." << std::endl;
+    //     }
+    // }
+
+    // // Створення потоку з файлового дескриптора. 
+    // // Це правильний спосіб роботи з послідовним портом.
+    // FILE* stream = fdopen(fd, "r");
+    // if (!stream) {
+    //     std::cerr << "Помилка: не вдалося створити потік з послідовного порту." << std::endl;
+    //     close(fd);
+    //     return 1;
+    // }
+
+    // //  Передаємо створений потік у функцію парсингу
+    // parseMspData(stream);
+
+    // // Закриття потоку і файлового дескриптора
     fclose(stream);
     close(fd);
 
