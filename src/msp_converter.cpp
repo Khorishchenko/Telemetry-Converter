@@ -212,7 +212,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint8_t command
 }
 
 // Глобальна функція для парсингу MSP
-void parseMspData(FILE* input) {
+void parseMspDataFile(FILE* input) {
     enum {
         MSP_IDLE,
         MSP_HEADER_START,

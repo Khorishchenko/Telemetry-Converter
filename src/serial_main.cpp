@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
 
 
     char buffer[256];
-
+    MspParser parser;
     // Головний нескінченний цикл
     while (true) {
         fd_set readfds;
@@ -97,6 +97,7 @@ int main(int argc, char* argv[]) {
                 std::cout.write(buffer, bytes_read);
                 // І передаємо їх для парсингу (якщо потрібно)
                 // parseMspData(buffer, bytes_read);
+                parser.parseData(buffer, bytes_read);
             }
         } else {
             // Дані не надійшли, продовжуємо чекати
@@ -143,8 +144,8 @@ int main(int argc, char* argv[]) {
     // parseMspData(stream);
 
     // // Закриття потоку і файлового дескриптора
-    fclose(stream);
-    close(fd);
+    // fclose(stream);
+    // close(fd);
 
     return 0;
 }
