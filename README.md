@@ -41,7 +41,7 @@
 1.  **Клонування репозиторію:**
 
     ```bash
-    git clone https://github.com/Taras-Vysh/Telemetry-Converter.git
+    git clone https://github.com/Khorishchenko/Telemetry-Converter.git
     cd Telemetry-Converter
     ```
 
