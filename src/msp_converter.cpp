@@ -72,8 +72,14 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint8_t command
                 uint8_t numSat = mspPayload[14];
                 uint8_t fixType = mspPayload[15];
 
+                std::cout << "  Парсинг MSP_RAW_GPS: Широта: " << lat / 10000000.0 << "°, Довгота: " << lon / 10000000.0 << "°, Висота: " << alt / 100.0f << " м" << std::endl;
+                std::cout << "  Швидкість: " << speed / 100.0f << " м/с, Супутників: " << static_cast<int>(numSat) << ", Фікс: " << static_cast<int>(fixType) << std::endl;
+
                 mavlink_msg_gps_raw_int_pack(1, 1, &mavlink_msg, 0, fixType, lat, lon, alt, 0, 0, speed, 0, numSat, 0, 0, 0, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
+
+                std::cout << "  Згенеровано MAVLink GPS_RAW_INT-пакет. Розмір: " << len << " байт." << std::endl;
+
                 printHexBuffer(buf, len);
                 writeToFile("msp_telemetry.bin", buf, len);
                 sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
@@ -88,8 +94,12 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint8_t command
                 float pitch_rad = pitch * (M_PI / 1800.0f);
                 float yaw_rad = yaw * (M_PI / 180.0f);
 
+                std::cout << "  Парсинг MSP_ATTITUDE: Крен: " << roll / 10.0f << "°, Тангаж: " << pitch / 10.0f << "°, Курс: " << yaw << "°" << std::endl;
+
                 mavlink_msg_attitude_pack(1, 1, &mavlink_msg, 0, roll_rad, pitch_rad, yaw_rad, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
+                std::cout << "  Згенеровано MAVLink ATTITUDE-пакет. Розмір: " << len << " байт." << std::endl;
+
                 printHexBuffer(buf, len);
                 writeToFile("msp_telemetry.bin", buf, len);
                 sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
@@ -101,8 +111,17 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint8_t command
                 for (size_t i = 0; i < 8; ++i) {
                     channels[i] = (mspPayload[i * 2] | (mspPayload[i * 2 + 1] << 8));
                 }
+
+                std::cout << "  Парсинг MSP_RC (Канали): ";
+                for (size_t i = 0; i < 8; ++i) {
+                    std::cout << "CH" << i + 1 << ": " << channels[i] << "  ";
+                }
+                std::cout << std::endl;
+
                 mavlink_msg_rc_channels_pack(1, 1, &mavlink_msg, 0, 8, channels[0], channels[1], channels[2], channels[3], channels[4], channels[5], channels[6], channels[7], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
+                std::cout << "  Згенеровано MAVLink RC_CHANNELS-пакет. Розмір: " << len << " байт." << std::endl;
+
                 printHexBuffer(buf, len);
                 writeToFile("msp_telemetry.bin", buf, len);
                 sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
@@ -114,8 +133,14 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint8_t command
                 int16_t current = (mspPayload[2] | (mspPayload[3] << 8));
                 uint16_t mahDrawn = (mspPayload[4] | (mspPayload[5] << 8));
                 uint16_t voltages[10] = {voltage, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+                std::cout << "  Парсинг MSP_BATTERY_STATUS: Напруга: " << voltage / 100.0f << " В, Струм: " << current / 10.0f << " A, Спожито: " << mahDrawn << " мАг" << std::endl;
+
                 mavlink_msg_battery_status_pack(1, 1, &mavlink_msg, 1, MAV_BATTERY_FUNCTION_ALL, MAV_BATTERY_TYPE_LIPO, 0, voltages, current, -1, 0, 0, 0, 0, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
+
+                std::cout << "  Згенеровано MAVLink BATTERY_STATUS-пакет. Розмір: " << len << " байт." << std::endl;
+
                 printHexBuffer(buf, len);
                 writeToFile("msp_telemetry.bin", buf, len);
                 sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
