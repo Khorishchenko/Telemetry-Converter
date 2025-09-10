@@ -23,15 +23,15 @@ private:
         MSP_HEADER_CODE,
         MSP_PAYLOAD,
         MSP_CHECKSUM
-    } currentState = MSP_IDLE;
+    } currentState;
 
     std::vector<uint8_t> payloadBuffer;
-    uint8_t dataSize = 0;
-    uint8_t checksum = 0;
+    uint8_t dataSize;
+    uint8_t checksum;
 
 public:
+    MspParser() : currentState(MSP_IDLE), dataSize(0), checksum(0) {}
     void parseData(const char* data, size_t length);
-    void resetState();
 };
 
 #endif // MSP_CONVERTER_H

@@ -19,6 +19,8 @@
 #define MAVLINK_MAX_PACKET_LEN 280
 
 
+
+
 // Функція для парсингу MSP-даних з файлу
 void parseMspDataFromFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::binary);

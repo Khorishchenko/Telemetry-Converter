@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <sys/select.h>
+#include <cstring>
 #include "msp_converter.h"
 
 int setupSerial(const std::string& port, int baudrate) {
@@ -50,6 +51,8 @@ int main() {
 
     char buffer[512];
     MspParser parser;
+    std::vector<char> dataBuffer;
+
     while (true) {
         fd_set readfds;
         FD_ZERO(&readfds);
@@ -61,10 +64,26 @@ int main() {
 
         int ready = select(fd + 1, &readfds, NULL, NULL, &timeout);
         if (ready > 0 && FD_ISSET(fd, &readfds)) {
-            ssize_t bytes_read = read(fd, buffer, sizeof(buffer));
+            ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
             if (bytes_read > 0) {
-                parser.parseData(buffer, bytes_read);
+                buffer[bytes_read] = '\0';
+                dataBuffer.insert(dataBuffer.end(), buffer, buffer + bytes_read);
+                size_t offset = 0;
+                while (offset < dataBuffer.size()) {
+                    parser.parseData(dataBuffer.data() + offset, dataBuffer.size() - offset);
+                    if (parser.getState() == MspParser::MSP_CHECKSUM && parser.isPacketComplete()) {
+                        dataBuffer.erase(dataBuffer.begin(), dataBuffer.begin() + offset + parser.getPayloadSize() + 3);
+                        offset = 0;
+                    } else {
+                        offset++;
+                    }
+                }
             }
+        } else if (ready == 0) {
+            std::cout << "Все ще очікуємо..." << std::endl;
+        } else {
+            std::cerr << "Помилка select" << std::endl;
+            break;
         }
     }
 

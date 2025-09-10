@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <fstream>
+#include <cmath>
 
 uint8_t calculateMspChecksum(const std::vector<uint8_t>& data) {
     uint8_t checksum = 0;
@@ -132,7 +133,11 @@ void MspParser::parseData(const char* data, size_t length) {
         
         switch (currentState) {
             case MSP_IDLE:
-                if (byte == '$') currentState = MSP_HEADER_START;
+                if (byte == '$') {
+                    currentState = MSP_HEADER_START;
+                    payloadBuffer.clear();
+                    checksum = 0;
+                }
                 break;
             case MSP_HEADER_START:
                 if (byte == 'M') currentState = MSP_HEADER_M;
@@ -144,7 +149,6 @@ void MspParser::parseData(const char* data, size_t length) {
                 break;
             case MSP_HEADER_ARROW:
                 dataSize = byte;
-                payloadBuffer.clear();
                 payloadBuffer.push_back(byte);
                 currentState = MSP_HEADER_SIZE;
                 break;
@@ -171,15 +175,8 @@ void MspParser::parseData(const char* data, size_t length) {
                 } else {
                     std::cerr << "Помилка контрольної суми! Отримано: 0x" << std::hex << (int)byte << ", Очікувалося: 0x" << (int)checksum << std::endl;
                 }
-                resetState();
+                currentState = MSP_IDLE;
                 break;
         }
     }
-}
-
-void MspParser::resetState() {
-    currentState = MSP_IDLE;
-    payloadBuffer.clear();
-    dataSize = 0;
-    checksum = 0;
 }
