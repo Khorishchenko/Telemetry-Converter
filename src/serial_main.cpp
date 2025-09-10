@@ -96,8 +96,8 @@ int main(int argc, char* argv[]) {
             if (bytes_read > 0) {
                 // Виводимо отримані дані
                 std::cout.write(buffer, bytes_read);
+                
                 // І передаємо їх для парсингу (якщо потрібно)
-                // parseMspData(buffer, bytes_read);
                 parser.parseData(buffer, bytes_read);
             }
         } else {

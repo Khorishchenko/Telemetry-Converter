@@ -19,12 +19,8 @@ void printHexBuffer(const uint8_t* buffer, uint16_t length);
 // Прототип для функції запису в файл
 void writeToFile(const std::string& filename, const uint8_t* buffer, uint16_t length);
 
-// Прототип для загальної функції парсингу MSP
-void parseMspData(FILE* input);
-
-
+// Прототип для функції відправки MAVLink-пакету по UDP
 void sendMavlinkPacketOverUdp(const uint8_t* buffer, uint16_t length, const std::string& ip_address, int port);
-
 
 
 
