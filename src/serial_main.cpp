@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
                 // std::cout.write(buffer, bytes_read);
 
                 // І передаємо їх для парсингу
-                parser.parseData(buffer, bytes_read);
+                // parser.parseData(buffer, bytes_read);
             }
         } 
         else {
