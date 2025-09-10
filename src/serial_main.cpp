@@ -71,7 +71,7 @@ int main() {
                 size_t offset = 0;
                 while (offset < dataBuffer.size()) {
                     parser.parseData(dataBuffer.data() + offset, dataBuffer.size() - offset);
-                    if (parser.getState() == MspParser::MSP_CHECKSUM && parser.isPacketComplete()) {
+                    if (parser.getState() == parser.getMspChecksum() && parser.isPacketComplete()) {
                         dataBuffer.erase(dataBuffer.begin(), dataBuffer.begin() + offset + parser.getPayloadSize() + 3);
                         offset = 0;
                     } else {

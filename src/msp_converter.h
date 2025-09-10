@@ -32,6 +32,10 @@ private:
 public:
     MspParser() : currentState(MSP_IDLE), dataSize(0), checksum(0) {}
     void parseData(const char* data, size_t length);
+    State getState() const { return currentState; }
+    bool isPacketComplete() const { return currentState == MSP_CHECKSUM && !payloadBuffer.empty(); }
+    size_t getPayloadSize() const { return dataSize; }
+    size_t getMspChecksum() const { return State::MSP_CHECKSUM; }
 };
 
 #endif // MSP_CONVERTER_H
