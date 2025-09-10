@@ -56,57 +56,57 @@ int setupSerial(const std::string& port, int baudrate) {
 
 // Головна функція для роботи з послідовним портом
 int main(int argc, char* argv[]) {
-    // std::cout << "Запуск програми-конвертера телеметрії MSP-MAVLink..." << std::endl;
+    std::cout << "Запуск програми-конвертера телеметрії MSP-MAVLink..." << std::endl;
 
-    // const char* serialPort = "/dev/serial0";
-    // int baudrate = 115200;
+    const char* serialPort = "/dev/serial0";
+    int baudrate = 115200;
 
-    // int fd = setupSerial(serialPort, baudrate);
-    // if (fd == -1) {
-    //     return 1;
-    // }
+    int fd = setupSerial(serialPort, baudrate);
+    if (fd == -1) {
+        return 1;
+    }
 
-    // std::cout << "Послідовний порт " << serialPort << " відкрито." << std::endl;
+    std::cout << "Послідовний порт " << serialPort << " відкрито." << std::endl;
 
-    // // Цикл для очікування вхідних даних
-    // std::cout << "Очікування вхідних даних з потоку..." << std::endl;
+    // Цикл для очікування вхідних даних
+    std::cout << "Очікування вхідних даних з потоку..." << std::endl;
 
 
-    // char buffer[256];
-    // MspParser parser;
+    char buffer[256];
+    MspParser parser;
     // Головний нескінченний цикл
-    // while (true) 
-    // {
-        // fd_set readfds;
-        // FD_ZERO(&readfds);
-        // FD_SET(fd, &readfds);
+    while (true) 
+    {
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(fd, &readfds);
         
 
-        // // Налаштування тайм-ауту (наприклад, 1 секунда)
-        // struct timeval timeout;
-        // timeout.tv_sec = 1;
-        // timeout.tv_usec = 0;
+        // Налаштування тайм-ауту (наприклад, 1 секунда)
+        struct timeval timeout;
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
 
-        // // Виклик select для перевірки наявності даних
-        // int ready = select(fd + 1, &readfds, NULL, NULL, &timeout);
+        // Виклик select для перевірки наявності даних
+        int ready = select(fd + 1, &readfds, NULL, NULL, &timeout);
 
-        // if (ready > 0 && FD_ISSET(fd, &readfds)) {
-        //     // Дані доступні для читання
-        //     ssize_t bytes_read = read(fd, buffer, sizeof(buffer));
+        if (ready > 0 && FD_ISSET(fd, &readfds)) {
+            // Дані доступні для читання
+            ssize_t bytes_read = read(fd, buffer, sizeof(buffer));
             
-        //     if (bytes_read > 0) {
-        //         // Виводимо отримані дані
-        //         // std::cout.write(buffer, bytes_read);
+            if (bytes_read > 0) {
+                // Виводимо отримані дані
+                // std::cout.write(buffer, bytes_read);
 
-        //         // І передаємо їх для парсингу
-        //         // parser.parseData(buffer, bytes_read);
-        //     }
-        // } 
-        // else {
-        //     std::cout << "Все ще очікуємо..." << std::endl;
-        // }
-    // }
-    // close(fd);
+                // І передаємо їх для парсингу
+                // parser.parseData(buffer, bytes_read);
+            }
+        } 
+        else {
+            std::cout << "Все ще очікуємо..." << std::endl;
+        }
+    }
+    close(fd);
 
     return 0;
 }
