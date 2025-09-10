@@ -49,7 +49,7 @@
     Оскільки програма використовує бібліотеку MAVLink, потрібно переконатися, що заголовні файли доступні. Для спрощення процесу, замість генерації, можна завантажити готові файли:
 
     ```bash
-    git clone git clone https://github.com/mavlink/c_library_v2.git
+    git clone https://github.com/mavlink/c_library_v2.git
     mv mavlink-c mavlink
     ```
 

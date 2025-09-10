@@ -75,7 +75,8 @@ int main(int argc, char* argv[]) {
     char buffer[256];
     MspParser parser;
     // Головний нескінченний цикл
-    while (true) {
+    while (true) 
+    {
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
@@ -95,12 +96,13 @@ int main(int argc, char* argv[]) {
             
             if (bytes_read > 0) {
                 // Виводимо отримані дані
-                std::cout.write(buffer, bytes_read);
+                // std::cout.write(buffer, bytes_read);
 
-                // І передаємо їх для парсингу (якщо потрібно)
+                // І передаємо їх для парсингу
                 parser.parseData(buffer, bytes_read);
             }
-        } else {
+        } 
+        else {
             std::cout << "Все ще очікуємо..." << std::endl;
         }
     }
