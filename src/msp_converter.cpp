@@ -92,7 +92,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint8_t command
                 int16_t yaw = (mspPayload[4] | (mspPayload[5] << 8));
                 float roll_rad = roll * (M_PI / 1800.0f);
                 float pitch_rad = pitch * (M_PI / 1800.0f);
-                float yaw_rad = yaw * (M_PI / 180.0f);
+                float yaw_rad = yaw * (M_PI / 1800.0f);
 
                 std::cout << "  Парсинг MSP_ATTITUDE: Крен: " << roll / 10.0f << "°, Тангаж: " << pitch / 10.0f << "°, Курс: " << yaw << "°" << std::endl;
 
