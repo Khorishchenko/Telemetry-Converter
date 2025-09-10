@@ -56,27 +56,27 @@ int setupSerial(const std::string& port, int baudrate) {
 
 // Головна функція для роботи з послідовним портом
 int main(int argc, char* argv[]) {
-    std::cout << "Запуск програми-конвертера телеметрії MSP-MAVLink..." << std::endl;
+    // std::cout << "Запуск програми-конвертера телеметрії MSP-MAVLink..." << std::endl;
 
-    const char* serialPort = "/dev/serial0";
-    int baudrate = 115200;
+    // const char* serialPort = "/dev/serial0";
+    // int baudrate = 115200;
 
-    int fd = setupSerial(serialPort, baudrate);
-    if (fd == -1) {
-        return 1;
-    }
+    // int fd = setupSerial(serialPort, baudrate);
+    // if (fd == -1) {
+    //     return 1;
+    // }
 
-    std::cout << "Послідовний порт " << serialPort << " відкрито." << std::endl;
+    // std::cout << "Послідовний порт " << serialPort << " відкрито." << std::endl;
 
-    // Цикл для очікування вхідних даних
-    std::cout << "Очікування вхідних даних з потоку..." << std::endl;
+    // // Цикл для очікування вхідних даних
+    // std::cout << "Очікування вхідних даних з потоку..." << std::endl;
 
 
-    char buffer[256];
-    MspParser parser;
+    // char buffer[256];
+    // MspParser parser;
     // Головний нескінченний цикл
-    while (true) 
-    {
+    // while (true) 
+    // {
         // fd_set readfds;
         // FD_ZERO(&readfds);
         // FD_SET(fd, &readfds);
@@ -105,8 +105,8 @@ int main(int argc, char* argv[]) {
         // else {
         //     std::cout << "Все ще очікуємо..." << std::endl;
         // }
-    }
-    close(fd);
+    // }
+    // close(fd);
 
     return 0;
 }
