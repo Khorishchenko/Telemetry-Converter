@@ -96,10 +96,10 @@ int main(int argc, char* argv[]) {
             
             if (bytes_read > 0) {
                 // Виводимо отримані дані
-                std::cout.write(buffer, bytes_read);
+                // std::cout.write(buffer, bytes_read);
 
                 // І передаємо їх для парсингу
-                // parser.parseData(buffer, bytes_read);
+                parser.parseData(buffer, bytes_read);
             }
         } 
         else {
