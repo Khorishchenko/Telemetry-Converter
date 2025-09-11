@@ -8,6 +8,21 @@
 #include <fstream>
 #include <cmath>
 
+
+// CRC-8/DVB-S2 (poly=0xD5, init=0x00, no reflection, xorout=0x00)
+static uint8_t crc8_dvb_s2(const uint8_t* data, size_t len) {
+    uint8_t crc = 0x00;
+    for (size_t i = 0; i < len; ++i) {
+        crc ^= data[i];
+        for (int b = 0; b < 8; ++b) {
+            if (crc & 0x80) crc = static_cast<uint8_t>((crc << 1) ^ 0xD5);
+            else crc = static_cast<uint8_t>(crc << 1);
+        }
+    }
+    return crc;
+}
+
+
 uint8_t calculateMspChecksum(const std::vector<uint8_t>& data) {
     uint8_t checksum = 0;
     for (uint8_t byte : data) {
@@ -200,40 +215,50 @@ void MspParser::parseData(const char* data, size_t length) {
                 break;
 
             case MSP_PAYLOAD:
-                payloadBuffer.push_back(byte);
+    payloadBuffer.push_back(byte);
 
-                // Мінімальна довжина для MSPv2: flags(1) + function(2) + size(2) = 5
-                if (payloadBuffer.size() >= 5) {
-                    uint16_t function = payloadBuffer[1] | (payloadBuffer[2] << 8);
-                    uint16_t size     = payloadBuffer[3] | (payloadBuffer[4] << 8);
+    // Мінімальна довжина для MSPv2: flags(1) + function(2) + size(2) = 5
+    if (payloadBuffer.size() >= 5) {
+        uint16_t function = static_cast<uint16_t>(payloadBuffer[1]) | (static_cast<uint16_t>(payloadBuffer[2]) << 8);
+        uint16_t size     = static_cast<uint16_t>(payloadBuffer[3]) | (static_cast<uint16_t>(payloadBuffer[4]) << 8);
 
-                    // Чекаємо, поки дійде весь payload + checksum
-                    if (payloadBuffer.size() == 5 + size + 1) {
-                        // Розрахунок checksum (XOR по header+payload, без '$M>')
-                        uint8_t calc = 0;
-                        for (size_t j = 0; j < 5 + size; j++) calc ^= payloadBuffer[j];
-                        uint8_t recv = payloadBuffer.back();
+        // Чекаємо доти, поки прийде весь payload + checksum
+        size_t totalNeeded = 5 + static_cast<size_t>(size) + 1; // header(5) + payload + checksum
+        if (payloadBuffer.size() >= totalNeeded) {
+            // Підготуємо дані для CRC (flags + function(2) + size(2) + payload)
+            // Вони лежать у payloadBuffer[0 .. 4+size-1]
+            uint8_t calc_buf_size = static_cast<uint8_t>(5 + size);
+            // Розрахунок CRC8 по цим байтам
+            uint8_t calc = crc8_dvb_s2(payloadBuffer.data(), 5 + size);
+            uint8_t recv = payloadBuffer[5 + size]; // checksum байт
 
-                        if (recv == calc) {
-                            std::vector<uint8_t> mspPayload(
-                                payloadBuffer.begin() + 5,
-                                payloadBuffer.begin() + 5 + size
-                            );
+            if (recv == calc) {
+                // Витягуємо payload
+                std::vector<uint8_t> mspPayload(
+                    payloadBuffer.begin() + 5,
+                    payloadBuffer.begin() + 5 + size
+                );
 
-                            std::cout << "Отримано MSPv2-пакет. Function: 0x"
-                                    << std::hex << function
-                                    << ", Розмір: " << std::dec << size << std::endl;
+                std::cout << "Отримано MSPv2-пакет. Function: 0x"
+                          << std::hex << function
+                          << ", Розмір: " << std::dec << size << std::endl;
 
-                            convertMspToMavlink(mspPayload, function);
-                        } else {
-                            std::cerr << "Помилка контрольної суми MSPv2! Отримано: 0x"
-                                    << std::hex << (int)recv
-                                    << ", Очікувалося: 0x" << (int)calc << std::endl;
-                        }
-                        currentState = MSP_IDLE;
-                    }
-                }
-                break;
+                convertMspToMavlink(mspPayload, function);
+            } else {
+                std::cerr << "Помилка контрольної суми MSPv2! Отримано: 0x"
+                          << std::hex << (int)recv
+                          << ", Очікувалося: 0x" << (int)calc << std::endl;
+            }
+
+            // Очищаємо буфер для наступного пакета.
+            // (parseData продовжує цикл — якщо вхідний буфер містив більше байт,
+            // наступні байти будуть оброблені у подальших ітераціях)
+            payloadBuffer.clear();
+            currentState = MSP_IDLE;
+        }
+    }
+    break;
+
             case MSP_CHECKSUM:
                 // Цей стан не використовується в MSPv2
                 currentState = MSP_IDLE;

@@ -93,7 +93,7 @@ int main() {
         if (ready > 0 && FD_ISSET(fd, &readfds)) {
             ssize_t bytes_read = read(fd, buffer, sizeof(buffer));
             if (bytes_read > 0) {
-                debugPrintAndLogRawHex(buffer, bytes_read);  // ✅ друк і логування
+                // debugPrintAndLogRawHex(buffer, bytes_read);  // ✅ друк і логування 
                 parser.parseData(buffer, bytes_read);       // ✅ парсинг MSP
 
                 if (parser.isPacketComplete()) {
