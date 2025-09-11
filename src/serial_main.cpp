@@ -8,6 +8,7 @@
 #include <cstring>
 #include <sstream>
 #include "msp_converter.h"
+#include <chrono>
 
 // Вивід і логування сирих байтів у HEX
 void debugPrintAndLogRawHex(const char* data, ssize_t length) {
@@ -94,7 +95,7 @@ int main() {
             // Запит MSP_BATTERY_STATUS
             std::vector<uint8_t> mspBatteryRequest = {'$', 'M', '<', 0x00, 107, 107};
             write(fd, mspBatteryRequest.data(), mspBatteryRequest.size());
-            
+
             lastMspRequest = now;
         }
         // --- END MSP RC REQUEST BLOCK ---
