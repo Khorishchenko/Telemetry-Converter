@@ -15,16 +15,19 @@ void sendMavlinkPacketOverUdp(const uint8_t* buffer, uint16_t length, const std:
 
 class MspParser {
 private:
+    size_t payloadBytesRead = 0;
     enum State {
         MSP_IDLE,
         MSP_HEADER_START,
         MSP_HEADER_M,
         MSP_HEADER_ARROW,
-        MSP_HEADER_SIZE,
-        MSP_HEADER_CODE,
+        MSP_HEADER_SIZE_LSB,
+        MSP_HEADER_SIZE_MSB,
+        MSP_HEADER_CMD_LSB,
+        MSP_HEADER_CMD_MSB,
         MSP_PAYLOAD,
         MSP_CHECKSUM
-    } currentState;
+    } currentState = MSP_IDLE;
 
     std::vector<uint8_t> payloadBuffer;
     uint8_t dataSize;

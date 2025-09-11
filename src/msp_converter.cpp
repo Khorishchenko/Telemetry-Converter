@@ -192,76 +192,92 @@ void MspParser::parseData(const char* data, size_t length) {
                     cmdLSB = 0;
                     cmdMSB = 0;
                 }
-                std::cout << "MSP_IDLE: отримано байт: 0x" << std::hex << (int)byte << std::dec << std::endl;
                 break;
             }
             case MSP_HEADER_START: {
-                if (byte == 'M') currentState = MSP_HEADER_M;
-                else currentState = MSP_IDLE;
+                if (byte == 'M') {
+                    currentState = MSP_HEADER_M;
+                } else {
+                    currentState = MSP_IDLE;
+                }
                 break;
             }
             case MSP_HEADER_M: {
-                if (byte == '>'|| byte == '<') { // MSPv2 reply
+                if (byte == '>' || byte == '<') {
                     currentState = MSP_HEADER_ARROW;
-                    std::cout << "Знайдено початок MSPv2-пакету: $M" << byte << std::endl;
+                    payloadBuffer.clear();
+                    payloadBuffer.push_back(byte); // flags
                 } else {
                     currentState = MSP_IDLE;
-                    std::cout << "Невірний символ після $M: " << byte << ", повернення до IDLE." << std::endl;
                 }
                 break;
             }
             case MSP_HEADER_ARROW: {
                 flags = byte;
-                payloadBuffer.push_back(byte);
-                currentState = MSP_HEADER_SIZE;
+                payloadBuffer.push_back(byte); // sizeLSB
+                currentState = MSP_HEADER_SIZE_LSB;
                 break;
             }
-            case MSP_HEADER_SIZE: {
+            case MSP_HEADER_SIZE_LSB: {
                 sizeLSB = byte;
-                payloadBuffer.push_back(byte);
-                currentState = MSP_HEADER_CODE;
+                payloadBuffer.push_back(byte); // sizeMSB
+                currentState = MSP_HEADER_SIZE_MSB;
                 break;
             }
-            case MSP_HEADER_CODE: {
+            case MSP_HEADER_SIZE_MSB: {
                 sizeMSB = byte;
-                payloadBuffer.push_back(byte);
+                payloadBuffer.push_back(byte); // cmdLSB
+                currentState = MSP_HEADER_CMD_LSB;
+                break;
+            }
+            case MSP_HEADER_CMD_LSB: {
+                cmdLSB = byte;
+                payloadBuffer.push_back(byte); // cmdMSB
+                currentState = MSP_HEADER_CMD_MSB;
+                break;
+            }
+            case MSP_HEADER_CMD_MSB: {
+                cmdMSB = byte;
+                payloadBuffer.push_back(byte); // payload starts next
+                payloadBytesRead = 0;
                 uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
                 if (payloadSize == 0) {
                     currentState = MSP_CHECKSUM;
-                    std::cout << "Payload size is 0, moving to CHECKSUM state." << std::endl;
                 } else {
                     currentState = MSP_PAYLOAD;
-                    std::cout << "Expecting payload of size: " << payloadSize << " bytes." << std::endl;
                 }
                 break;
             }
             case MSP_PAYLOAD: {
                 payloadBuffer.push_back(byte);
+                ++payloadBytesRead;
                 uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
-                if (payloadBuffer.size() == 5 + payloadSize) { // 5: flags, sizeLSB, sizeMSB, cmdLSB, cmdMSB + payload
+                if (payloadBytesRead >= payloadSize) {
                     currentState = MSP_CHECKSUM;
                 }
                 break;
             }
             case MSP_CHECKSUM: {
-                uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
-                cmdLSB = payloadBuffer[3];
-                cmdMSB = payloadBuffer[4];
-                std::vector<uint8_t> crcData(payloadBuffer.begin(), payloadBuffer.end() - 1);
+                // CRC8-DVB-S2 по всіх байтах після '>'/<' включно до кінця payload (без CRC)
                 uint8_t recvCRC = byte;
-                uint8_t calcCRC = crc8_dvb_s2(crcData.data(), crcData.size());
-
+                uint8_t calcCRC = crc8_dvb_s2(payloadBuffer.data(), payloadBuffer.size());
                 uint16_t function = (static_cast<uint16_t>(cmdMSB) << 8) | cmdLSB;
+                uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
+
                 if (recvCRC == calcCRC) {
                     std::cout << "✅ Отримано MSPv2-пакет. Function: 0x" << std::hex << function
                               << ", Розмір: " << std::dec << payloadSize << std::endl;
-                    std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 5, payloadBuffer.end() - 1);
+                    // payloadBuffer: [flags, sizeLSB, sizeMSB, cmdLSB, cmdMSB, payload...]
+                    std::vector<uint8_t> mspPayload;
+                    if (payloadSize > 0 && payloadBuffer.size() >= 5 + payloadSize) {
+                        mspPayload.assign(payloadBuffer.begin() + 5, payloadBuffer.begin() + 5 + payloadSize);
+                    }
                     convertMspToMavlink(mspPayload, function);
-                    currentState = MSP_IDLE;
                 } else {
                     std::cerr << "❌ Помилка контрольної суми MSPv2! Отримано: 0x" << std::hex << (int)recvCRC
                               << ", Очікувалося: 0x" << (int)calcCRC << std::dec << std::endl;
                 }
+                currentState = MSP_IDLE;
                 break;
             }
             default: {
