@@ -297,7 +297,3 @@ void MspParser::parseData(const char* data, size_t length) {
         }
     }
 }
-
-// Приклад для MSPv1 (MSP_RC)
-std::vector<uint8_t> mspRequest = {'$', 'M', '<', 0x00, 105, 105}; // 105 - MSP_RC, 0x00 - payload size
-write(fd, mspRequest.data(), mspRequest.size());
