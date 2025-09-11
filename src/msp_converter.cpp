@@ -201,8 +201,10 @@ void MspParser::parseData(const char* data, size_t length) {
             case MSP_HEADER_M: {
                 if (byte == '>'|| byte == '<') { // MSPv2 reply
                     currentState = MSP_HEADER_ARROW;
+                    std::cout << "Знайдено початок MSPv2-пакету: $M" << byte << std::endl;
                 } else {
                     currentState = MSP_IDLE;
+                    std::cout << "Невірний символ після $M: " << byte << ", повернення до IDLE." << std::endl;
                 }
                 break;
             }
