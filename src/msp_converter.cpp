@@ -253,7 +253,7 @@ void MspParser::parseData(const char* data, size_t length) {
                 } else {
                     currentState = MSP_PAYLOAD;
                     std::cout << "Команда MSP MSB: 0x" << std::hex << (int)cmdMSB << std::dec << std::endl;
-                    std::cout << "Очікуваний розмір payload: " << payloadSize
+                    std::cout << "Очікуваний розмір payload: " << payloadSize << " байт." << std::endl;
                 }
                 break;
             }
