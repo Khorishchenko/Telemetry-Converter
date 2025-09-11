@@ -7,6 +7,7 @@
 #include <string.h>
 #include <fstream>
 #include <cmath>
+#include <iomanip>
 
 
 // CRC-8/DVB-S2 (poly=0xD5, init=0x00, no reflection, xorout=0x00)
@@ -34,7 +35,7 @@ uint8_t calculateMspChecksum(const std::vector<uint8_t>& data) {
 void printHexBuffer(const uint8_t* buffer, uint16_t length) {
     std::cout << "  MAVLink-пакет (HEX): ";
     for (uint16_t i = 0; i < length; ++i) {
-        // std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buffer[i]) << " ";
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buffer[i]) << " ";
     }
     std::cout << std::dec << std::endl;
 }
