@@ -218,55 +218,46 @@ void MspParser::parseData(const char* data, size_t length) {
             case MSP_PAYLOAD:
                 payloadBuffer.push_back(byte);
 
-                // Мінімальна довжина для MSPv2: flags(1) + function(2) + size(2) = 5
+                // Чекаємо, поки прийде мінімальний хедер (5 байт) для визначення розміру
                 if (payloadBuffer.size() >= 5) {
-                    uint16_t function = static_cast<uint16_t>(payloadBuffer[1]) | (static_cast<uint16_t>(payloadBuffer[2]) << 8);
-                    uint16_t size     = static_cast<uint16_t>(payloadBuffer[3]) | (static_cast<uint16_t>(payloadBuffer[4]) << 8);
+                    // Розмір payload з байтів payloadBuffer[3] і payloadBuffer[4]
+                    uint16_t payloadSize = static_cast<uint16_t>(payloadBuffer[3]) | (static_cast<uint16_t>(payloadBuffer[4]) << 8);
 
-                    // Чекаємо доти, поки прийде весь payload + checksum
-                    size_t totalNeeded = 5 + static_cast<size_t>(size) + 1; // header(5) + payload + checksum
-                    if (payloadBuffer.size() >= totalNeeded) {
-                        // Підготуємо дані для CRC (flags + function(2) + size(2) + payload)
-                        // Вони лежать у payloadBuffer[0 .. 4+size-1]
-                        uint8_t calc_buf_size = static_cast<uint8_t>(5 + size);
-                        // Розрахунок CRC8 по цим байтам
-                        uint8_t calc = crc8_dvb_s2(payloadBuffer.data(), 5 + size);
-                        uint8_t recv = payloadBuffer[5 + size]; // checksum байт
+                    // Перевіряємо, чи весь пакет + CRC вже прийшов
+                    if (payloadBuffer.size() >= 5 + payloadSize + 1) {
+                        uint8_t recvCRC = payloadBuffer.back();
+                        payloadBuffer.pop_back();
 
-                        if (recv == calc) {
-                            // Витягуємо payload
-                            std::vector<uint8_t> mspPayload(
-                                payloadBuffer.begin() + 5,
-                                payloadBuffer.begin() + 5 + size
-                            );
+                        // Підготовка даних для CRC (flags + function(2) + size(2) + payload)
+                        std::vector<uint8_t> crcData(payloadBuffer.begin(), payloadBuffer.begin() + 5 + payloadSize);
+                        uint8_t calcCRC = crc8_dvb_s2(crcData.data(), crcData.size());
 
-                            std::cout << "Отримано MSPv2-пакет. Function: 0x"
+                        uint16_t function = static_cast<uint16_t>(payloadBuffer[1]) | (static_cast<uint16_t>(payloadBuffer[2]) << 8);
+
+                        if (recvCRC == calcCRC) {
+                            std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 5, payloadBuffer.begin() + 5 + payloadSize);
+
+                            std::cout << "✅ MSPv2 packet. Function: 0x"
                                     << std::hex << function
-                                    << ", Розмір: " << std::dec << size << std::endl;
+                                    << ", Size: " << std::dec << payloadSize << std::endl;
 
                             convertMspToMavlink(mspPayload, function);
                         } else {
-                            std::cerr << "Помилка контрольної суми MSPv2! Отримано: 0x"
-                                    << std::hex << (int)recv
-                                    << ", Очікувалося: 0x" << (int)calc << std::endl;
+                            std::cerr << "❌ CRC mismatch! Got: 0x" << std::hex << (int)recvCRC
+                                    << ", Expected: 0x" << (int)calcCRC << std::dec << std::endl;
 
-                            std::cerr << "HEX frame (5+size+1=" << (5+size+1) << "): ";
-                            for (size_t j = 0; j < payloadBuffer.size(); j++) {
-                                std::cerr << std::hex << std::setw(2) << std::setfill('0')
-                                        << (int)payloadBuffer[j] << " ";
+                            std::cerr << "HEX frame: ";
+                            for (size_t j = 0; j < payloadBuffer.size(); ++j) {
+                                std::cerr << std::hex << std::setw(2) << std::setfill('0') << (int)payloadBuffer[j] << " ";
                             }
                             std::cerr << std::dec << std::endl;
                         }
 
-                        // Очищаємо буфер для наступного пакета.
-                        // (parseData продовжує цикл — якщо вхідний буфер містив більше байт,
-                        // наступні байти будуть оброблені у подальших ітераціях)
                         payloadBuffer.clear();
                         currentState = MSP_IDLE;
                     }
                 }
                 break;
-
             case MSP_CHECKSUM:
                 // Цей стан не використовується в MSPv2
                 currentState = MSP_IDLE;
