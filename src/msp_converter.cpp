@@ -191,7 +191,7 @@ void MspParser::parseData(const char* data, size_t length) {
                 break;
             }
             case MSP_HEADER_M: {
-                if (byte == '>') { // MSPv2 reply
+                if (byte == '>'|| byte == '<') { // MSPv2 reply
                     currentState = MSP_HEADER_ARROW;
                 } else {
                     currentState = MSP_IDLE;
@@ -216,8 +216,10 @@ void MspParser::parseData(const char* data, size_t length) {
                 uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
                 if (payloadSize == 0) {
                     currentState = MSP_CHECKSUM;
+                    std::cout << "Payload size is 0, moving to CHECKSUM state." << std::endl;
                 } else {
                     currentState = MSP_PAYLOAD;
+                    std::cout << "Expecting payload of size: " << payloadSize << " bytes." << std::endl;
                 }
                 break;
             }
