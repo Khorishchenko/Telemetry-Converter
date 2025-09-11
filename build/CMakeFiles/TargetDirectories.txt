@@ -1,4 +1,0 @@
-/Users/admin/Desktop/Telemetry-Converter/build/CMakeFiles/TelemetryConverter_File.dir
-/Users/admin/Desktop/Telemetry-Converter/build/CMakeFiles/TelemetryConverter_Serial.dir
-/Users/admin/Desktop/Telemetry-Converter/build/CMakeFiles/edit_cache.dir
-/Users/admin/Desktop/Telemetry-Converter/build/CMakeFiles/rebuild_cache.dir
