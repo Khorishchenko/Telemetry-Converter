@@ -239,13 +239,13 @@ void MspParser::parseData(const char* data, size_t length) {
 
                 uint16_t function = (static_cast<uint16_t>(cmdMSB) << 8) | cmdLSB;
                 if (recvCRC == calcCRC) {
-                    std::cout << "✅ MSPv2 packet. Function: 0x" << std::hex << function
-                              << ", Size: " << std::dec << payloadSize << std::endl;
+                    std::cout << "✅ Отримано MSPv2-пакет. Function: 0x" << std::hex << function
+                              << ", Розмір: " << std::dec << payloadSize << std::endl;
                     std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 5, payloadBuffer.end() - 1);
                     convertMspToMavlink(mspPayload, static_cast<uint8_t>(function));
                 } else {
-                    std::cerr << "❌ CRC mismatch! Got: 0x" << std::hex << (int)recvCRC
-                              << ", Expected: 0x" << (int)calcCRC << std::dec << std::endl;
+                    std::cerr << "❌ Помилка контрольної суми MSPv2! Отримано: 0x" << std::hex << (int)recvCRC
+                              << ", Очікувалося: 0x" << (int)calcCRC << std::dec << std::endl;
                 }
                 currentState = MSP_IDLE;
                 break;
