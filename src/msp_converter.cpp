@@ -201,29 +201,42 @@ void MspParser::parseData(const char* data, size_t length) {
 
             case MSP_PAYLOAD:
                 payloadBuffer.push_back(byte);
-                // як тільки назбиралось достатньо для size + payload + checksum → обробка
+
+                // Мінімальна довжина для MSPv2: flags(1) + function(2) + size(2) = 5
                 if (payloadBuffer.size() >= 5) {
-                    uint16_t size = payloadBuffer[3] | (payloadBuffer[4] << 8); // payload size
-                    if (payloadBuffer.size() == 5 + size + 1) { // header(5) + payload + checksum
-                        // розрахунок checksum
+                    uint16_t function = payloadBuffer[1] | (payloadBuffer[2] << 8);
+                    uint16_t size     = payloadBuffer[3] | (payloadBuffer[4] << 8);
+
+                    // Чекаємо, поки дійде весь payload + checksum
+                    if (payloadBuffer.size() == 5 + size + 1) {
+                        // Розрахунок checksum (XOR по header+payload, без '$M>')
                         uint8_t calc = 0;
                         for (size_t j = 0; j < 5 + size; j++) calc ^= payloadBuffer[j];
                         uint8_t recv = payloadBuffer.back();
-                        if (recv == calc) {
-                            uint16_t function = payloadBuffer[1] | (payloadBuffer[2] << 8);
-                            std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 5, payloadBuffer.end() - 1);
 
-                            std::cout << "Отримано MSPv2-пакет. Function: 0x" 
-                                      << std::hex << function << ", Розмір: " << std::dec << size << std::endl;
+                        if (recv == calc) {
+                            std::vector<uint8_t> mspPayload(
+                                payloadBuffer.begin() + 5,
+                                payloadBuffer.begin() + 5 + size
+                            );
+
+                            std::cout << "Отримано MSPv2-пакет. Function: 0x"
+                                    << std::hex << function
+                                    << ", Розмір: " << std::dec << size << std::endl;
 
                             convertMspToMavlink(mspPayload, function);
                         } else {
-                            std::cerr << "Помилка контрольної суми MSPv2! Отримано: 0x" 
-                                      << std::hex << (int)recv << ", Очікувалося: 0x" << (int)calc << std::endl;
+                            std::cerr << "Помилка контрольної суми MSPv2! Отримано: 0x"
+                                    << std::hex << (int)recv
+                                    << ", Очікувалося: 0x" << (int)calc << std::endl;
                         }
                         currentState = MSP_IDLE;
                     }
                 }
+                break;
+            case MSP_CHECKSUM:
+                // Цей стан не використовується в MSPv2
+                currentState = MSP_IDLE;
                 break;
         }
     }
