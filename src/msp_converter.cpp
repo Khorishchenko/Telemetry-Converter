@@ -57,7 +57,7 @@ void sendMavlinkPacketOverUdp(const uint8_t* buffer, uint16_t length, const std:
     close(sock);
 }
 
-void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint8_t commandCode) {
+void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t commandCode) {
     mavlink_message_t mavlink_msg;
     uint8_t buf[MAVLINK_MAX_PACKET_LEN];
     uint16_t len;
@@ -155,52 +155,75 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint8_t command
 void MspParser::parseData(const char* data, size_t length) {
     for (size_t i = 0; i < length; ++i) {
         uint8_t byte = static_cast<uint8_t>(data[i]);
-        
+
         switch (currentState) {
             case MSP_IDLE:
                 if (byte == '$') {
                     currentState = MSP_HEADER_START;
                     payloadBuffer.clear();
-                    checksum = 0;
                 }
                 break;
+
             case MSP_HEADER_START:
-                if (byte == 'M') currentState = MSP_HEADER_M;
-                else currentState = MSP_IDLE;
+                if (byte == 'M') {
+                    currentState = MSP_HEADER_M;
+                } else {
+                    currentState = MSP_IDLE;
+                }
                 break;
+
             case MSP_HEADER_M:
-                if (byte == '<' || byte == '>') currentState = MSP_HEADER_ARROW; // ✅ приймаємо і запити, і відповіді
-                else currentState = MSP_IDLE;
+                if (byte == '<' || byte == '>') {
+                    // MSP v1 response OR MSP v2 response
+                    currentState = MSP_HEADER_ARROW;
+                } else {
+                    currentState = MSP_IDLE;
+                }
                 break;
+
             case MSP_HEADER_ARROW:
-                dataSize = byte;
-                payloadBuffer.push_back(byte);
-                currentState = MSP_HEADER_SIZE;
+                // перший байт після "$M>" — це flags (MSP v2)
+                payloadBuffer.push_back(byte); // flags
+                currentState = MSP_HEADER_SIZE; 
                 break;
+
             case MSP_HEADER_SIZE:
+                // function LSB
                 payloadBuffer.push_back(byte);
                 currentState = MSP_HEADER_CODE;
                 break;
+
             case MSP_HEADER_CODE:
+                // function MSB
                 payloadBuffer.push_back(byte);
-                if (dataSize > 0) currentState = MSP_PAYLOAD;
-                else currentState = MSP_CHECKSUM;
+                currentState = MSP_PAYLOAD;
                 break;
+
             case MSP_PAYLOAD:
                 payloadBuffer.push_back(byte);
-                if (payloadBuffer.size() == 3 + dataSize) currentState = MSP_CHECKSUM;
-                break;
-            case MSP_CHECKSUM:
-                checksum = 0;
-                for (size_t j = 0; j < payloadBuffer.size(); ++j) checksum ^= payloadBuffer[j];
-                if (byte == checksum) {
-                    std::cout << "Отримано MSP-пакет. Тип: 0x" << std::hex << (int)payloadBuffer[2] << ", Розмір: " << std::dec << dataSize << std::endl;
-                    std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 2, payloadBuffer.end() - 1);
-                    convertMspToMavlink(mspPayload, payloadBuffer[2]);
-                } else {
-                    std::cerr << "Помилка контрольної суми! Отримано: 0x" << std::hex << (int)byte << ", Очікувалося: 0x" << (int)checksum << std::endl;
+                // як тільки назбиралось достатньо для size + payload + checksum → обробка
+                if (payloadBuffer.size() >= 5) {
+                    uint16_t size = payloadBuffer[3] | (payloadBuffer[4] << 8); // payload size
+                    if (payloadBuffer.size() == 5 + size + 1) { // header(5) + payload + checksum
+                        // розрахунок checksum
+                        uint8_t calc = 0;
+                        for (size_t j = 0; j < 5 + size; j++) calc ^= payloadBuffer[j];
+                        uint8_t recv = payloadBuffer.back();
+                        if (recv == calc) {
+                            uint16_t function = payloadBuffer[1] | (payloadBuffer[2] << 8);
+                            std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 5, payloadBuffer.end() - 1);
+
+                            std::cout << "Отримано MSPv2-пакет. Function: 0x" 
+                                      << std::hex << function << ", Розмір: " << std::dec << size << std::endl;
+
+                            convertMspToMavlink(mspPayload, function);
+                        } else {
+                            std::cerr << "Помилка контрольної суми MSPv2! Отримано: 0x" 
+                                      << std::hex << (int)recv << ", Очікувалося: 0x" << (int)calc << std::endl;
+                        }
+                        currentState = MSP_IDLE;
+                    }
                 }
-                currentState = MSP_IDLE;
                 break;
         }
     }

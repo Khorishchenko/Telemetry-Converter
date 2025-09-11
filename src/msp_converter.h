@@ -7,7 +7,8 @@
 #include <iostream>
 
 uint8_t calculateMspChecksum(const std::vector<uint8_t>& data);
-void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint8_t commandCode);
+// void convertMspToMavlinkFile(const std::vector<uint8_t>& mspPayload, uint8_t commandCode);
+void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t commandCode);
 void printHexBuffer(const uint8_t* buffer, uint16_t length);
 void writeToFile(const std::string& filename, const uint8_t* buffer, uint16_t length);
 void sendMavlinkPacketOverUdp(const uint8_t* buffer, uint16_t length, const std::string& ip_address, int port);
