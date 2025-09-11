@@ -168,6 +168,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
     }
 }
 
+
 void MspParser::parseData(const char* data, size_t length) {
     for (size_t i = 0; i < length; ++i) {
         uint8_t byte = static_cast<uint8_t>(data[i]);
@@ -190,7 +191,6 @@ void MspParser::parseData(const char* data, size_t length) {
 
             case MSP_HEADER_M:
                 if (byte == '<' || byte == '>') {
-                    // MSP v1 response OR MSP v2 response
                     currentState = MSP_HEADER_ARROW;
                 } else {
                     currentState = MSP_IDLE;
@@ -198,68 +198,59 @@ void MspParser::parseData(const char* data, size_t length) {
                 break;
 
             case MSP_HEADER_ARROW:
-                // перший байт після "$M>" — це flags (MSP v2)
-                payloadBuffer.push_back(byte); // flags
-                currentState = MSP_HEADER_SIZE; 
+                flags = byte; // окремо зберігаємо
+                currentState = MSP_HEADER_SIZE;
                 break;
 
             case MSP_HEADER_SIZE:
-                // function LSB
-                payloadBuffer.push_back(byte);
+                sizeLSB = byte;
                 currentState = MSP_HEADER_CODE;
                 break;
 
             case MSP_HEADER_CODE:
-                // function MSB
-                payloadBuffer.push_back(byte);
+                sizeMSB = byte;
+                payloadSize = static_cast<uint16_t>(sizeLSB) | (sizeMSB << 8);
+                cmdLSB = byte;  // тут треба ще один байт function LSB
                 currentState = MSP_PAYLOAD;
                 break;
 
             case MSP_PAYLOAD:
                 payloadBuffer.push_back(byte);
 
-                // Чекаємо, поки прийде мінімальний хедер (5 байт) для визначення розміру
-                if (payloadBuffer.size() >= 5) {
-                    // Розмір payload з байтів payloadBuffer[3] і payloadBuffer[4]
-                    uint16_t payloadSize = static_cast<uint16_t>(payloadBuffer[3]) | (static_cast<uint16_t>(payloadBuffer[4]) << 8);
+                if (payloadBuffer.size() >= payloadSize) {
+                    uint8_t recvCRC = payloadBuffer[payloadSize];
+                    
+                    // CRC розрахунок: flags + function(2) + size(2) + payload
+                    std::vector<uint8_t> crcData = {flags, cmdLSB, cmdMSB, sizeLSB, sizeMSB};
+                    crcData.insert(crcData.end(), payloadBuffer.begin(), payloadBuffer.begin() + payloadSize);
 
-                    // Перевіряємо, чи весь пакет + CRC вже прийшов
-                    if (payloadBuffer.size() >= 5 + payloadSize + 1) {
-                        uint8_t recvCRC = payloadBuffer.back();
-                        payloadBuffer.pop_back();
+                    uint8_t calcCRC = crc8_dvb_s2(crcData.data(), crcData.size());
+                    uint16_t function = static_cast<uint16_t>(cmdLSB) | (static_cast<uint16_t>(cmdMSB) << 8);
 
-                        // Підготовка даних для CRC (flags + function(2) + size(2) + payload)
-                        std::vector<uint8_t> crcData(payloadBuffer.begin(), payloadBuffer.begin() + 5 + payloadSize);
-                        uint8_t calcCRC = crc8_dvb_s2(crcData.data(), crcData.size());
+                    if (recvCRC == calcCRC) {
+                        std::vector<uint8_t> mspPayload(payloadBuffer.begin(), payloadBuffer.begin() + payloadSize);
+                        std::cout << "✅ MSPv2 packet. Function: 0x" << std::hex << function
+                                  << ", Size: " << std::dec << payloadSize << std::endl;
 
-                        uint16_t function = static_cast<uint16_t>(payloadBuffer[1]) | (static_cast<uint16_t>(payloadBuffer[2]) << 8);
+                        convertMspToMavlink(mspPayload, function);
+                    } else {
+                        std::cerr << "❌ CRC mismatch! Got: 0x" << std::hex << (int)recvCRC
+                                  << ", Expected: 0x" << (int)calcCRC << std::dec << std::endl;
 
-                        if (recvCRC == calcCRC) {
-                            std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 5, payloadBuffer.begin() + 5 + payloadSize);
-
-                            std::cout << "✅ MSPv2 packet. Function: 0x"
-                                    << std::hex << function
-                                    << ", Size: " << std::dec << payloadSize << std::endl;
-
-                            convertMspToMavlink(mspPayload, function);
-                        } else {
-                            std::cerr << "❌ CRC mismatch! Got: 0x" << std::hex << (int)recvCRC
-                                    << ", Expected: 0x" << (int)calcCRC << std::dec << std::endl;
-
-                            std::cerr << "HEX frame: ";
-                            for (size_t j = 0; j < payloadBuffer.size(); ++j) {
-                                std::cerr << std::hex << std::setw(2) << std::setfill('0') << (int)payloadBuffer[j] << " ";
-                            }
-                            std::cerr << std::dec << std::endl;
+                        std::cerr << "HEX frame: ";
+                        for (size_t j = 0; j < payloadBuffer.size(); ++j) {
+                            std::cerr << std::hex << std::setw(2) << std::setfill('0')
+                                      << (int)payloadBuffer[j] << " ";
                         }
-
-                        payloadBuffer.clear();
-                        currentState = MSP_IDLE;
+                        std::cerr << std::dec << std::endl;
                     }
+
+                    payloadBuffer.clear();
+                    currentState = MSP_IDLE;
                 }
                 break;
+
             case MSP_CHECKSUM:
-                // Цей стан не використовується в MSPv2
                 currentState = MSP_IDLE;
                 break;
         }
