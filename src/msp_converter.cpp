@@ -286,6 +286,7 @@ void MspParser::parseData(const char* data, size_t length) {
                 } else {
                     std::cerr << "❌ Помилка контрольної суми MSPv2! Отримано: 0x" << std::hex << (int)recvCRC
                               << ", Очікувалося: 0x" << (int)calcCRC << std::dec << std::endl;
+                    currentState = MSP_IDLE;
                 }
             }
         }
