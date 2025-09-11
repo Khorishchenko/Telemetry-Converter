@@ -234,10 +234,10 @@ void MspParser::parseData(const char* data, size_t length) {
                             std::cerr << "❌ CRC mismatch! Got: 0x" << std::hex << (int)recvCRC
                                       << ", Expected: 0x" << (int)calcCRC << std::dec << std::endl;
 
-                            std::cerr << "HEX frame: ";
-                            for (auto b : payloadBuffer)
-                                std::cerr << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
-                            std::cerr << std::dec << std::endl;
+                            // std::cerr << "HEX frame: ";
+                            // for (auto b : payloadBuffer)
+                            //     std::cerr << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
+                            // std::cerr << std::dec << std::endl;
                         }
 
                         payloadBuffer.clear();
