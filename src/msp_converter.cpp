@@ -282,14 +282,11 @@ void MspParser::parseData(const char* data, size_t length) {
                         mspPayload.assign(payloadBuffer.begin() + 5, payloadBuffer.begin() + 5 + payloadSize);
                     }
                     convertMspToMavlink(mspPayload, function);
+                    currentState = MSP_IDLE;
                 } else {
                     std::cerr << "❌ Помилка контрольної суми MSPv2! Отримано: 0x" << std::hex << (int)recvCRC
                               << ", Очікувалося: 0x" << (int)calcCRC << std::dec << std::endl;
                 }
-            }
-            default: {
-                currentState = MSP_IDLE;
-                break;
             }
         }
     }
