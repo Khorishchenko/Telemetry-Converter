@@ -169,7 +169,7 @@ void MspParser::parseData(const char* data, size_t length) {
                 else currentState = MSP_IDLE;
                 break;
             case MSP_HEADER_M:
-                if (byte == '<') currentState = MSP_HEADER_ARROW;
+                if (byte == '<' || byte == '>') currentState = MSP_HEADER_ARROW; // ✅ приймаємо і запити, і відповіді
                 else currentState = MSP_IDLE;
                 break;
             case MSP_HEADER_ARROW:
