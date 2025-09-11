@@ -188,7 +188,7 @@ void MspParser::parseData(const char* data, size_t length) {
         switch (currentState) {
             case MSP_IDLE: {
                 if (byte == '$') {
-                    std::cout << "Початок нового MSP-пакету знайдено: '$'" << std::endl;
+                    std::cout << "⚡️ Початок нового MSP-пакету знайдено: '$'" << std::endl;
                     currentState = MSP_HEADER_START;
                     payloadBuffer.clear();
                     flags = 0;
@@ -202,7 +202,7 @@ void MspParser::parseData(const char* data, size_t length) {
             case MSP_HEADER_START: {
                 if (byte == 'M') {
                     currentState = MSP_HEADER_M;
-                    std::cout << "Знайдено 'M' після '$'" << std::endl;
+                    std::cout << "⚡️ Знайдено 'M' після '$'" << std::endl;
                 } else {
                     currentState = MSP_IDLE;
                 }
@@ -213,7 +213,7 @@ void MspParser::parseData(const char* data, size_t length) {
                     currentState = MSP_HEADER_ARROW;
                     payloadBuffer.clear();
                     payloadBuffer.push_back(byte); // flags
-                    std::cout << "Знайдено початок MSPv2-пакету: $M" << byte << std::endl;
+                    std::cout << "⚡️ Знайдено початок MSPv2-пакету: $M" << byte << std::endl;
                 } else {
                     currentState = MSP_IDLE;
                 }
@@ -223,28 +223,28 @@ void MspParser::parseData(const char* data, size_t length) {
                 flags = byte;
                 payloadBuffer.push_back(byte); // sizeLSB
                 currentState = MSP_HEADER_SIZE_LSB;
-                std::cout << "Флаги MSPv2: 0x" << std::hex << (int)flags << std::dec << std::endl;
+                std::cout << "⚡️Флаги MSPv2: 0x" << std::hex << (int)flags << std::dec << std::endl;
                 break;
             }
             case MSP_HEADER_SIZE_LSB: {
                 sizeLSB = byte;
                 payloadBuffer.push_back(byte); // sizeMSB
                 currentState = MSP_HEADER_SIZE_MSB;
-                std::cout << "Розмір payload LSB: " << (int)sizeLSB << std::endl;
+                std::cout << "⚡️Розмір payload LSB: " << (int)sizeLSB << std::endl;
                 break;
             }
             case MSP_HEADER_SIZE_MSB: {
                 sizeMSB = byte;
                 payloadBuffer.push_back(byte); // cmdLSB
                 currentState = MSP_HEADER_CMD_LSB;
-                std::cout << "Розмір payload MSB: " << (int)sizeMSB << std::endl;
+                std::cout << "⚙️Розмір payload MSB: " << (int)sizeMSB << std::endl;
                 break;
             }
             case MSP_HEADER_CMD_LSB: {
                 cmdLSB = byte;
                 payloadBuffer.push_back(byte); // cmdMSB
                 currentState = MSP_HEADER_CMD_MSB;
-                std::cout << "Команда MSP LSB: 0x" << std::hex << (int)cmdLSB << std::dec << std::endl;
+                std::cout << "⚙️Команда MSP LSB: 0x" << std::hex << (int)cmdLSB << std::dec << std::endl;
                 break;
             }
             case MSP_HEADER_CMD_MSB: {
@@ -254,11 +254,11 @@ void MspParser::parseData(const char* data, size_t length) {
                 uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
                 if (payloadSize == 0) {
                     currentState = MSP_CHECKSUM;
-                    std::cout << "Payload розмір 0, переходимо до контрольної суми." << std::endl;
+                    std::cout << "⚙️Payload розмір 0, переходимо до контрольної суми." << std::endl;
                 } else {
                     currentState = MSP_PAYLOAD;
-                    std::cout << "Команда MSP MSB: 0x" << std::hex << (int)cmdMSB << std::dec << std::endl;
-                    std::cout << "Очікуваний розмір payload: " << payloadSize << " байт." << std::endl;
+                    std::cout << "⚙️Команда MSP MSB: 0x" << std::hex << (int)cmdMSB << std::dec << std::endl;
+                    std::cout << "⚙️Очікуваний розмір payload: " << payloadSize << " байт." << std::endl;
                 }
                 break;
             }
