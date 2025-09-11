@@ -79,8 +79,26 @@ int main() {
 
     char buffer[512];
     MspParser parser;
+    
+    auto lastMspRequest = std::chrono::steady_clock::now();
 
     while (true) {
+        // --- MSP RC REQUEST BLOCK ---
+
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - lastMspRequest).count() >= 1) {
+            // Запит MSP_RC
+            std::vector<uint8_t> mspRequest = {'$', 'M', '<', 0x00, 105, 105};
+            write(fd, mspRequest.data(), mspRequest.size());
+
+            // Запит MSP_BATTERY_STATUS
+            std::vector<uint8_t> mspBatteryRequest = {'$', 'M', '<', 0x00, 107, 107};
+            write(fd, mspBatteryRequest.data(), mspBatteryRequest.size());
+            
+            lastMspRequest = now;
+        }
+        // --- END MSP RC REQUEST BLOCK ---
+
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
