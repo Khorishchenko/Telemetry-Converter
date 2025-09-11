@@ -162,7 +162,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
             }
             break;
-        case 0x1208: // Додайте обробку для 0x1208
+        case 0x1208:
             std::cout << "Отримano MSPv2 пакет 0x1208. Розмір: " << mspPayload.size() << " байт." << std::endl;
             std::cout << "Вміст mspPayload (HEX): ";
             for (size_t i = 0; i < mspPayload.size(); ++i) {
@@ -172,6 +172,11 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
             break;
         default:
             std::cout << "  Невідомий тип MSP-повідомлення: 0x" << std::hex << (int)commandCode << std::endl;
+            std::cout << "  Payload (" << std::dec << mspPayload.size() << " байт): ";
+            for (size_t i = 0; i < mspPayload.size(); ++i) {
+                std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(mspPayload[i]) << " ";
+            }
+            std::cout << std::dec << std::endl;
             break;
     }
 }

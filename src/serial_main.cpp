@@ -96,9 +96,9 @@ int main() {
                 // debugPrintAndLogRawHex(buffer, bytes_read);  // ✅ друк і логування 
                 parser.parseData(buffer, bytes_read);       // ✅ парсинг MSP
 
-                if (parser.isPacketComplete()) {
-                    std::cout << "✅ MSP-пакет завершено і оброблено.\n";
-                }
+                // if (parser.isPacketComplete()) {
+                //     std::cout << "✅ MSP-пакет завершено і оброблено.\n";
+                // }
             }
         } else if (ready == 0) {
             std::cout << "Все ще очікуємо..." << std::endl;
