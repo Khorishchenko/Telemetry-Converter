@@ -183,6 +183,7 @@ void MspParser::parseData(const char* data, size_t length) {
         switch (currentState) {
             case MSP_IDLE: {
                 if (byte == '$') {
+                    std::cout << "Початок нового MSP-пакету знайдено: '$'" << std::endl;
                     currentState = MSP_HEADER_START;
                     payloadBuffer.clear();
                     flags = 0;
@@ -191,6 +192,7 @@ void MspParser::parseData(const char* data, size_t length) {
                     cmdLSB = 0;
                     cmdMSB = 0;
                 }
+                std::cout << "MSP_IDLE: отримано байт: 0x" << std::hex << (int)byte << std::dec << std::endl;
                 break;
             }
             case MSP_HEADER_START: {
