@@ -278,7 +278,7 @@ void MspParser::parseData(const char* data, size_t length) {
                 uint16_t function = (static_cast<uint16_t>(cmdMSB) << 8) | cmdLSB;
                 uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
 
-                // if (recvCRC == calcCRC) {
+                if (recvCRC == calcCRC) {
                     std::cout << "✅ Отримано MSPv2-пакет. Function: 0x" << std::hex << function
                               << ", Розмір: " << std::dec << payloadSize << std::endl;
                     // payloadBuffer: [flags, sizeLSB, sizeMSB, cmdLSB, cmdMSB, payload...]
@@ -288,11 +288,11 @@ void MspParser::parseData(const char* data, size_t length) {
                     }
                     convertMspToMavlink(mspPayload, function);
                     currentState = MSP_IDLE;
-                // } else {
-                //     std::cerr << "❌ Помилка контрольної суми MSPv2! Отримано: 0x" << std::hex << (int)recvCRC
-                //               << ", Очікувалося: 0x" << (int)calcCRC << std::dec << std::endl;
-                //     currentState = MSP_IDLE;
-                // }
+                } else {
+                    std::cerr << "❌ Помилка контрольної суми MSPv2! Отримано: 0x" << std::hex << (int)recvCRC
+                              << ", Очікувалося: 0x" << (int)calcCRC << std::dec << std::endl;
+                    currentState = MSP_IDLE;
+                }
             }
         }
     }
