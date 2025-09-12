@@ -183,7 +183,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
 
 void MspParser::parseData(const char* data, size_t length) {
     for (size_t i = 0; i < length; ++i) {
-        uint8_t byte = static_cast<uint8_t>(data[i]);
+        uint16_t byte = static_cast<uint16_t>(data[i]);
 
         switch (currentState) {
             case MSP_IDLE: {
