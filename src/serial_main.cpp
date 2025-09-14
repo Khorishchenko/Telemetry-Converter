@@ -10,6 +10,25 @@
 #include "msp_converter.h"
 #include <chrono>
 
+
+void sendMspV2Request(int fd, uint16_t function) {
+    uint8_t frame[9];
+    frame[0] = '$';
+    frame[1] = 'X';   // MSPv2 marker
+    frame[2] = '<';   // direction: to FC
+    frame[3] = 0x00;  // flags
+    frame[4] = function & 0xFF;        // function LSB
+    frame[5] = (function >> 8) & 0xFF; // function MSB
+    frame[6] = 0x00; // size LSB
+    frame[7] = 0x00; // size MSB
+    frame[8] = crc8_dvb_s2(frame + 3, 5); // CRC8 over flags+function+size
+
+    write(fd, frame, sizeof(frame));
+    tcdrain(fd);
+    std::cout << "👉 Надіслано MSPv2-запит function=0x" 
+              << std::hex << function << std::dec << std::endl;
+}
+
 // Вивід і логування сирих байтів у HEX
 void debugPrintAndLogRawHex(const char* data, ssize_t length) {
     static std::ofstream logfile("uart_raw.log", std::ios::app);
@@ -68,6 +87,8 @@ int setupSerial(const std::string& port, int baudrate) {
     return fd;
 }
 
+#include <chrono>
+
 int main() {
     std::cout << "Запуск програми-конвертера телеметрії MSP-MAVLink..." << std::endl;
 
@@ -80,51 +101,34 @@ int main() {
 
     char buffer[512];
     MspParser parser;
-    
-    auto lastMspRequest = std::chrono::steady_clock::now();
+
+    auto lastRequest = std::chrono::steady_clock::now();
 
     while (true) {
-        // --- MSP RC REQUEST BLOCK ---
-
-        auto now = std::chrono::steady_clock::now();
-        if (std::chrono::duration_cast<std::chrono::seconds>(now - lastMspRequest).count() >= 1) {
-            // Запит MSP_RC
-            std::vector<uint8_t> mspRequest = {'$', 'M', '<', 0x00, 105, 105};
-            write(fd, mspRequest.data(), mspRequest.size());
-
-            // Запит MSP_BATTERY_STATUS
-            std::vector<uint8_t> mspBatteryRequest = {'$', 'M', '<', 0x00, 107, 107};
-            write(fd, mspBatteryRequest.data(), mspBatteryRequest.size());
-
-            lastMspRequest = now;
-        }
-        // --- END MSP RC REQUEST BLOCK ---
-
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
 
         struct timeval timeout{};
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000; // 100ms
 
         int ready = select(fd + 1, &readfds, NULL, NULL, &timeout);
+
         if (ready > 0 && FD_ISSET(fd, &readfds)) {
             ssize_t bytes_read = read(fd, buffer, sizeof(buffer));
             if (bytes_read > 0) {
-                // std::cout << "Прочитано " << bytes_read << " байт з UART." << std::endl;
-                // debugPrintAndLogRawHex(buffer, bytes_read);  // ✅ друк і логування 
-                parser.parseData(buffer, bytes_read);       // ✅ парсинг MSP
-
-                // if (parser.isPacketComplete()) {
-                //     std::cout << "✅ MSP-пакет завершено і оброблено.\n";
-                // }
+                parser.parseData(buffer, bytes_read);
             }
-        } else if (ready == 0) {
-            std::cout << "Все ще очікуємо..." << std::endl;
-        } else {
-            std::cerr << "Помилка select" << std::endl;
-            break;
+        }
+
+        // ⏱️ Надсилаємо запити кожні 100 мс
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastRequest).count() > 100) {
+            sendMspV2Request(fd, 0x0069); // MSP_RC
+            sendMspV2Request(fd, 0x006C); // MSP_ATTITUDE
+            sendMspV2Request(fd, 0x006B); // MSP_BATTERY_STATUS
+            lastRequest = now;
         }
     }
 
