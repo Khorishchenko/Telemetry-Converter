@@ -15,11 +15,8 @@
 #define MSP_STATUS_EX             150
 #define MSP_UID                   160
 
-// MSPv2 extended codes (examples)
 #define MSP_BATTERY_STATE         0x010B
 #define MSP_RC_EXTENDED           0x0105
-
-// Додай інші потрібні коди за потреби
 
 // --- Кольори для консолі (ANSI escape codes) ---
 #define COLOR_RESET   "\033[0m"

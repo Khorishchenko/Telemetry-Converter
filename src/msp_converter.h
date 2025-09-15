@@ -1,11 +1,12 @@
-#ifndef MSP_CONVERTER_H
-#define MSP_CONVERTER_H
+#pragma once
 
 #include <vector>
 #include <cstdint>
 #include <string>
-#include <iostream>
 
+
+// функції для роботи з MSP і MAVLink
+void sendMspV2Request(int fd, uint16_t function);
 uint8_t calculateMspChecksum(const std::vector<uint8_t>& data);
 uint8_t crc8_dvb_s2(const uint8_t* data, size_t len);
 void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t commandCode);
@@ -13,47 +14,21 @@ void printHexBuffer(const uint8_t* buffer, uint16_t length);
 void writeToFile(const std::string& filename, const uint8_t* buffer, uint16_t length);
 void sendMavlinkPacketOverUdp(const uint8_t* buffer, uint16_t length, const std::string& ip_address, int port);
 
+
+// клас для парсингу MSP-пакетів
 class MspParser {
 private:
-    size_t payloadBytesRead = 0;
     enum State {
         MSP_IDLE,
         MSP_HEADER_START,
         MSP_HEADER_M,
-        MSP_HEADER_ARROW,
-        MSP_HEADER_SIZE_LSB,
-        MSP_HEADER_SIZE_MSB,
-        MSP_HEADER_CMD_LSB,
-        MSP_HEADER_CMD_MSB,
-        MSP_PAYLOAD,
-        MSP_CHECKSUM
+        MSP_PAYLOAD
     } currentState = MSP_IDLE;
 
     std::vector<uint8_t> payloadBuffer;
     std::vector<uint8_t> headerBuffer;
 
-    uint8_t dataSize;
-    uint8_t checksum;
-
-    uint8_t flags;       // перший байт після "$M>" || "<"
-    uint8_t cmdLSB;      // function LSB
-    uint8_t cmdMSB;      // function MSB
-    uint8_t sizeLSB;     // LSB розміру payload
-    uint8_t sizeMSB;     // MSB розміру payload
-    uint16_t payloadSize; // розмір payload
-
 public:
-    MspParser() : currentState(MSP_IDLE), dataSize(0), checksum(0) {}
+    MspParser() = default;
     void parseData(const char* data, size_t length);
-    State getState() const { return currentState; }
-
-    size_t getPayloadSize() const { return dataSize; }
- 
-    // Пакет вважається завершеним, якщо payload отримано і checksum зійшлась
-    bool isPacketComplete() const { return !payloadBuffer.empty() && currentState == MSP_IDLE; }
-
-    // Повертаємо останній обчислений checksum (для дебагу)
-    uint8_t getChecksum() const { return checksum; }
 };
-
-#endif // MSP_CONVERTER_H

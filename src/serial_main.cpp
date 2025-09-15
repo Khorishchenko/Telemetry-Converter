@@ -1,73 +1,46 @@
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <fcntl.h>
-#include <unistd.h>
-#include <termios.h>
-#include <sys/select.h>
-#include <cstring>
-#include <sstream>
 #include "msp_converter.h"
 #include "msp_protocol.h"
 #include <chrono>
-
-
-void sendMspV2Request(int fd, uint16_t function) {
-    uint8_t frame[9];
-    frame[0] = '$';
-    frame[1] = 'X';   // MSPv2 marker
-    frame[2] = '<';   // direction: to FC
-    frame[3] = 0x00;  // flags
-    frame[4] = function & 0xFF;        // function LSB
-    frame[5] = (function >> 8) & 0xFF; // function MSB
-    frame[6] = 0x00; // size LSB
-    frame[7] = 0x00; // size MSB
-    frame[8] = crc8_dvb_s2(frame + 3, 5); // CRC8 over flags+function+size
-
-    write(fd, frame, sizeof(frame));
-    tcdrain(fd);
-    // std::cout << "👉 Надіслано MSPv2-запит function=0x" 
-    //           << std::hex << function << std::dec << std::endl;
-}
+#include <iostream>
+#include <unistd.h>
+#include <sys/select.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <cstring>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 
 // Вивід і логування сирих байтів у HEX
 void debugPrintAndLogRawHex(const char* data, ssize_t length) {
     static std::ofstream logfile("uart_raw.log", std::ios::app);
-
     std::ostringstream oss;
     oss << "UART RAW (" << length << " байт): ";
-    for (ssize_t i = 0; i < length; i++) {
+    for (ssize_t i = 0; i < length; i++)
         oss << std::hex << std::setw(2) << std::setfill('0')
             << (static_cast<int>(static_cast<unsigned char>(data[i]))) << " ";
-    }
     oss << std::dec << "\n";
-
     std::string line = oss.str();
-
-    // Вивід у консоль
     std::cout << line;
-
-    // Запис у лог
     if (logfile.is_open()) {
         logfile << line;
         logfile.flush();
     }
 }
 
+// Налаштування послідовного порту
 int setupSerial(const std::string& port, int baudrate) {
     int fd = open(port.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
     if (fd < 0) {
-        std::cerr << "Помилка: не вдалося відкрити послідовний порт " << port << std::endl;
+        std::cerr << COLOR_RED << "Помилка: не вдалося відкрити послідовний порт " << port << COLOR_RESET << std::endl;
         return -1;
     }
-
     struct termios tty{};
     if (tcgetattr(fd, &tty) != 0) {
-        std::cerr << "Помилка: не вдалося отримати атрибути послідовного порту." << std::endl;
+        std::cerr << COLOR_RED << "Помилка: не вдалося отримати атрибути послідовного порту." << COLOR_RESET << std::endl;
         close(fd);
         return -1;
     }
-
     cfsetispeed(&tty, B115200);
     cfsetospeed(&tty, B115200);
     tty.c_cflag |= (CLOCAL | CREAD);
@@ -78,20 +51,16 @@ int setupSerial(const std::string& port, int baudrate) {
     tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
     tty.c_iflag &= ~(IXON | IXOFF | IXANY);
     tty.c_oflag &= ~OPOST;
-
     if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        std::cerr << "Помилка: не вдалося встановити атрибути послідовного порту." << std::endl;
+        std::cerr << COLOR_RED << "Помилка: не вдалося встановити атрибути послідовного порту." << COLOR_RESET << std::endl;
         close(fd);
         return -1;
     }
-
     return fd;
 }
 
-#include <chrono>
-
 int main() {
-    std::cout << "Запуск програми-конвертера телеметрії MSP-MAVLink..." << std::endl;
+    std::cout << COLOR_GREEN << "Запуск програми-конвертера телеметрії MSP-MAVLink..." << COLOR_RESET << std::endl;
 
     const char* serialPort = "/dev/serial0";
     int fd = setupSerial(serialPort, 115200);
@@ -102,9 +71,9 @@ int main() {
 
     char buffer[512];
     MspParser parser;
-
     auto lastRequest = std::chrono::steady_clock::now();
 
+    // Основний цикл читання та обробки даних
     while (true) {
         fd_set readfds;
         FD_ZERO(&readfds);
@@ -120,15 +89,16 @@ int main() {
             ssize_t bytes_read = read(fd, buffer, sizeof(buffer));
             if (bytes_read > 0) {
                 parser.parseData(buffer, bytes_read);
+                // debugPrintAndLogRawHex(buffer, bytes_read); // для діагностики
             }
         }
 
-        // ⏱️ Надсилаємо запити кожні 100 мс
+        // Надсилаємо запити кожні 100 мс для отримання телеметрії
         auto now = std::chrono::steady_clock::now();
         if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastRequest).count() > 100) {
-            sendMspV2Request(fd, MSP_RC); // MSP_RC
-            sendMspV2Request(fd, MSP_ATTITUDE); // MSP_ATTITUDE
-            sendMspV2Request(fd, MSP_BATTERY_STATUS); // MSP_BATTERY_STATUS
+            sendMspV2Request(fd, MSP_RC);
+            sendMspV2Request(fd, MSP_ATTITUDE);
+            sendMspV2Request(fd, MSP_BATTERY_STATUS);
             lastRequest = now;
         }
     }
