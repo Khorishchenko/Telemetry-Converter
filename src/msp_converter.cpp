@@ -129,7 +129,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 float pitch_rad = pitch * (M_PI / 1800.0f);
                 float yaw_rad = yaw * (M_PI / 1800.0f);
 
-                std::cout << "  Парсинг " << COLOR_GREEN << " MSP_ATTITUDE: " << COLOR_RESET << "Крен: " << roll / 10.0f << "°, Тангаж: " << pitch / 10.0f << "°, Курс: " << yaw << "°" << std::endl;
+                std::cout << "  Парсинг " << COLOR_YELLOW << " MSP_ATTITUDE: " << COLOR_RESET << "Крен: " << roll / 10.0f << "°, Тангаж: " << pitch / 10.0f << "°, Курс: " << yaw << "°" << std::endl;
 
                 mavlink_msg_attitude_pack(1, 1, &mavlink_msg, 0, roll_rad, pitch_rad, yaw_rad, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
@@ -145,7 +145,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 for (size_t i = 0; i < 8; ++i)
                     channels[i] = (mspPayload[i * 2] | (mspPayload[i * 2 + 1] << 8));
 
-                std::cout << "  Парсинг " << COLOR_GREEN << " MSP_RC (Канали): " << COLOR_RESET;
+                std::cout << "  Парсинг " << COLOR_YELLOW << " MSP_RC (Канали): " << COLOR_RESET;
                 for (size_t i = 0; i < 8; ++i)
                     std::cout << "CH" << i + 1 << ": " << channels[i] << "  ";
                 std::cout << std::endl;
@@ -165,7 +165,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 uint16_t mahDrawn = (mspPayload[4] | (mspPayload[5] << 8));
                 uint16_t voltages[10] = {voltage, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-                std::cout << "  Парсинг " << COLOR_GREEN << " MSP_BATTERY_STATUS:" << COLOR_RESET << " Напруга: " << voltage / 100.0f << " В, Струм: " << current / 10.0f << " A, Спожито: " << mahDrawn << " мАг" << std::endl;
+                std::cout << "  Парсинг " << COLOR_YELLOW << " MSP_BATTERY_STATUS:" << COLOR_RESET << " Напруга: " << voltage / 100.0f << " В, Струм: " << current / 10.0f << " A, Спожито: " << mahDrawn << " мАг" << std::endl;
 
                 mavlink_msg_battery_status_pack(1, 1, &mavlink_msg, 1, MAV_BATTERY_FUNCTION_ALL, MAV_BATTERY_TYPE_LIPO, 0, voltages, current, -1, 0, 0, 0, 0, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
