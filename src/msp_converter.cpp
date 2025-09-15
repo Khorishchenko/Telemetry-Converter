@@ -203,7 +203,7 @@ void MspParser::parseData(const char* data, size_t length) {
             case MSP_HEADER_START: {
                 if (byte == 'X') {
                     currentState = MSP_HEADER_M;
-                    std::cout << "⚡️Знайдено 'M' після '$'" << std::endl;
+                    std::cout << "⚡️Знайдено 'X' після '$'" << std::endl;
                 } else {
                     currentState = MSP_IDLE;
                 }
@@ -214,7 +214,7 @@ void MspParser::parseData(const char* data, size_t length) {
                     currentState = MSP_HEADER_ARROW;
                     payloadBuffer.clear();
                     payloadBuffer.push_back(byte); // flags
-                    std::cout << "⚡️Знайдено початок MSPv2-пакету: $M" << byte << std::endl;
+                    std::cout << "⚡️Знайдено початок MSPv2-пакету: $X" << byte << std::endl;
                 } else {
                     currentState = MSP_IDLE;
                 }

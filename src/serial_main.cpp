@@ -26,8 +26,8 @@ void sendMspV2Request(int fd, uint16_t function) {
 
     write(fd, frame, sizeof(frame));
     tcdrain(fd);
-    std::cout << "👉 Надіслано MSPv2-запит function=0x" 
-              << std::hex << function << std::dec << std::endl;
+    // std::cout << "👉 Надіслано MSPv2-запит function=0x" 
+    //           << std::hex << function << std::dec << std::endl;
 }
 
 // Вивід і логування сирих байтів у HEX
