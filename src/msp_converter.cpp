@@ -131,7 +131,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                     channels[i] = (mspPayload[i * 2] | (mspPayload[i * 2 + 1] << 8));
                 }
 
-                std::cout << "  Парсинг MSP_RC (Канали): ";
+                std::cout << "  Парсинг " << COLOR_GREEN << " MSP_RC (Канали): " << COLOR_RESET;
                 for (size_t i = 0; i < 8; ++i) {
                     std::cout << "CH" << i + 1 << ": " << channels[i] << "  ";
                 }
