@@ -12,7 +12,7 @@
 
 
 // CRC-8/DVB-S2 (poly=0xD5, init=0x00, no reflection, xorout=0x00)
-static uint8_t crc8_dvb_s2(const uint8_t* data, size_t len) {
+uint8_t crc8_dvb_s2(const uint8_t* data, size_t len) {
     uint8_t crc = 0x00;
     for (size_t i = 0; i < len; ++i) {
         crc ^= data[i];
