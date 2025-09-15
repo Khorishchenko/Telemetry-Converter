@@ -1,4 +1,5 @@
 #include "msp_converter.h"
+#include "msp_protocol.h"
 #include <mavlink.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -79,7 +80,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
     uint16_t len;
 
     switch (commandCode) {
-        case 106: // MSP_RAW_GPS
+        case MSP_RAW_GPS: // MSP_RAW_GPS
             if (mspPayload.size() >= 16) {
                 int32_t lat = (mspPayload[0] | (mspPayload[1] << 8) | (mspPayload[2] << 16) | (mspPayload[3] << 24));
                 int32_t lon = (mspPayload[4] | (mspPayload[5] << 8) | (mspPayload[6] << 16) | (mspPayload[7] << 24));
@@ -101,7 +102,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
             }
             break;
-        case 108: // MSP_ATTITUDE
+        case MSP_ATTITUDE: // MSP_ATTITUDE
             if (mspPayload.size() >= 6) {
                 int16_t roll = (mspPayload[0] | (mspPayload[1] << 8));
                 int16_t pitch = (mspPayload[2] | (mspPayload[3] << 8));
@@ -121,7 +122,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
             }
             break;
-        case 105: // MSP_RC
+        case MSP_RC: // MSP_RC
             if (mspPayload.size() >= 16) {
                 std::vector<uint16_t> channels(8);
                 for (size_t i = 0; i < 8; ++i) {
@@ -143,7 +144,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
             }
             break;
-        case 107: // MSP_BATTERY_STATUS
+        case MSP_BATTERY_STATUS: // MSP_BATTERY_STATUS
             if (mspPayload.size() >= 6) {
                 uint16_t voltage = (mspPayload[0] | (mspPayload[1] << 8));
                 int16_t current = (mspPayload[2] | (mspPayload[3] << 8));

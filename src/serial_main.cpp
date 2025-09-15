@@ -8,6 +8,7 @@
 #include <cstring>
 #include <sstream>
 #include "msp_converter.h"
+#include "msp_protocol.h"
 #include <chrono>
 
 
@@ -125,9 +126,9 @@ int main() {
         // ⏱️ Надсилаємо запити кожні 100 мс
         auto now = std::chrono::steady_clock::now();
         if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastRequest).count() > 100) {
-            sendMspV2Request(fd, 0x0069); // MSP_RC
-            sendMspV2Request(fd, 0x006C); // MSP_ATTITUDE
-            sendMspV2Request(fd, 0x006B); // MSP_BATTERY_STATUS
+            sendMspV2Request(fd, MSP_RC); // MSP_RC
+            sendMspV2Request(fd, MSP_ATTITUDE); // MSP_ATTITUDE
+            sendMspV2Request(fd, MSP_BATTERY_STATE); // MSP_BATTERY_STATUS
             lastRequest = now;
         }
     }
