@@ -113,7 +113,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 float pitch_rad = pitch * (M_PI / 1800.0f);
                 float yaw_rad = yaw * (M_PI / 1800.0f);
 
-                std::cout << "  Парсинг MSP_ATTITUDE: Крен: " << roll / 10.0f << "°, Тангаж: " << pitch / 10.0f << "°, Курс: " << yaw << "°" << std::endl;
+                std::cout << "  Парсинг " << COLOR_GREEN << " MSP_ATTITUDE: " << COLOR_RESET << "Крен: " << roll / 10.0f << "°, Тангаж: " << pitch / 10.0f << "°, Курс: " << yaw << "°" << std::endl;
 
                 mavlink_msg_attitude_pack(1, 1, &mavlink_msg, 0, roll_rad, pitch_rad, yaw_rad, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
