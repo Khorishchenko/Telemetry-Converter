@@ -201,7 +201,7 @@ void MspParser::parseData(const char* data, size_t length) {
                 break;
             }
             case MSP_HEADER_START: {
-                if (byte == 'M') {
+                if (byte == 'X') {
                     currentState = MSP_HEADER_M;
                     std::cout << "⚡️Знайдено 'M' після '$'" << std::endl;
                 } else {
@@ -294,7 +294,11 @@ void MspParser::parseData(const char* data, size_t length) {
                               << ", Очікувалося: 0x" << (int)calcCRC << std::dec << std::endl;
                     currentState = MSP_IDLE;
                 }
+                break;
             }
+            default:
+                currentState = MSP_IDLE;
+                break;
         }
     }
 }
