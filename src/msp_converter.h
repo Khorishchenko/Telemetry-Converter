@@ -30,6 +30,8 @@ private:
     } currentState = MSP_IDLE;
 
     std::vector<uint8_t> payloadBuffer;
+    std::vector<uint8_t> headerBuffer;
+
     uint8_t dataSize;
     uint8_t checksum;
 

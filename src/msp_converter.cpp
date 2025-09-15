@@ -11,7 +11,9 @@
 #include <iomanip>
 
 
+// ==========================================================
 // CRC-8/DVB-S2 (poly=0xD5, init=0x00, no reflection, xorout=0x00)
+// ==========================================================
 uint8_t crc8_dvb_s2(const uint8_t* data, size_t len) {
     uint8_t crc = 0x00;
     for (size_t i = 0; i < len; ++i) {
@@ -182,120 +184,247 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
     }
 }
 
+// void MspParser::parseData(const char* data, size_t length) {
+//     for (size_t i = 0; i < length; ++i) {
+//         uint16_t byte = static_cast<uint16_t>(data[i]);
+
+//         switch (currentState) {
+//             case MSP_IDLE: {
+//                 if (byte == '$') {
+//                     std::cout << "⚡️Початок нового MSP-пакету знайдено: '$'" << std::endl;
+//                     currentState = MSP_HEADER_START;
+//                     payloadBuffer.clear();
+//                     flags = 0;
+//                     sizeLSB = 0;
+//                     sizeMSB = 0;
+//                     cmdLSB = 0;
+//                     cmdMSB = 0;
+//                 }
+//                 break;
+//             }
+//             case MSP_HEADER_START: {
+//                 if (byte == 'X') {
+//                     currentState = MSP_HEADER_M;
+//                     std::cout << "⚡️Знайдено 'X' після '$'" << std::endl;
+//                 } else {
+//                     currentState = MSP_IDLE;
+//                 }
+//                 break;
+//             }
+//             case MSP_HEADER_M: {
+//                 if (byte == '>' || byte == '<') {
+//                     currentState = MSP_HEADER_ARROW;
+//                     payloadBuffer.clear();
+//                     payloadBuffer.push_back(byte); // flags
+//                     std::cout << "⚡️Знайдено початок MSPv2-пакету: $X" << byte << std::endl;
+//                 } else {
+//                     currentState = MSP_IDLE;
+//                 }
+//                 break;
+//             }
+//             case MSP_HEADER_ARROW: {
+//                 flags = byte;
+//                 payloadBuffer.push_back(byte); // sizeLSB
+//                 currentState = MSP_HEADER_SIZE_LSB;
+//                 std::cout << "⚡️Флаги MSPv2: 0x" << std::hex << (int)flags << std::dec << std::endl;
+//                 break;
+//             }
+//             case MSP_HEADER_SIZE_LSB: {
+//                 sizeLSB = byte;
+//                 payloadBuffer.push_back(byte); // sizeMSB
+//                 currentState = MSP_HEADER_SIZE_MSB;
+//                 std::cout << "⚡️Розмір payload LSB: " << (int)sizeLSB << std::endl;
+//                 break;
+//             }
+//             case MSP_HEADER_SIZE_MSB: {
+//                 sizeMSB = byte;
+//                 payloadBuffer.push_back(byte); // cmdLSB
+//                 currentState = MSP_HEADER_CMD_LSB;
+//                 std::cout << "⚡️Розмір payload MSB: " << (int)sizeMSB << std::endl;
+//                 break;
+//             }
+//             case MSP_HEADER_CMD_LSB: {
+//                 cmdLSB = byte;
+//                 payloadBuffer.push_back(byte); // cmdMSB
+//                 currentState = MSP_HEADER_CMD_MSB;
+//                 std::cout << "⚡️Команда MSP LSB: 0x" << std::hex << (int)cmdLSB << std::dec << std::endl;
+//                 break;
+//             }
+//             case MSP_HEADER_CMD_MSB: {
+//                 cmdMSB = byte;
+//                 payloadBuffer.push_back(byte); // payload starts next
+//                 payloadBytesRead = 0;
+//                 uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
+//                 if (payloadSize == 0) {
+//                     currentState = MSP_CHECKSUM;
+//                     std::cout << "⚡️Payload розмір 0, переходимо до контрольної суми." << std::endl;
+//                 } else {
+//                     currentState = MSP_PAYLOAD;
+//                     std::cout << "⚡️Команда MSP MSB: 0x" << std::hex << (int)cmdMSB << std::dec << std::endl;
+//                     std::cout << "⚡️Очікуваний розмір payload: " << payloadSize << " байт." << std::endl;
+//                 }
+//                 break;
+//             }
+//             case MSP_PAYLOAD: {
+//                 payloadBuffer.push_back(byte);
+//                 ++payloadBytesRead;
+//                 uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
+//                 if (payloadBytesRead >= payloadSize) {
+//                     currentState = MSP_CHECKSUM;
+//                 }
+//                 break;
+//             }
+//             case MSP_CHECKSUM: {
+//                 // CRC8-DVB-S2 по всіх байтах після '>'/<' включно до кінця payload (без CRC)
+//                 uint8_t recvCRC = byte;
+//                 uint8_t calcCRC = crc8_dvb_s2(payloadBuffer.data(), payloadBuffer.size());
+//                 uint16_t function = (static_cast<uint16_t>(cmdMSB) << 8) | cmdLSB;
+//                 uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
+
+//                 if (recvCRC == calcCRC) {
+//                     std::cout << "✅ Отримано MSPv2-пакет. Function: 0x" << std::hex << function
+//                               << ", Розмір: " << std::dec << payloadSize << std::endl;
+//                     // payloadBuffer: [flags, sizeLSB, sizeMSB, cmdLSB, cmdMSB, payload...]
+//                     std::vector<uint8_t> mspPayload;
+//                     if (payloadSize > 0 && payloadBuffer.size() >= 5 + payloadSize) {
+//                         mspPayload.assign(payloadBuffer.begin() + 5, payloadBuffer.begin() + 5 + payloadSize);
+//                     }
+//                     convertMspToMavlink(mspPayload, function);
+//                     currentState = MSP_IDLE;
+//                 } else {
+//                     std::cerr << "❌ Помилка контрольної суми MSPv2! Отримано: 0x" << std::hex << (int)recvCRC
+//                               << ", Очікувалося: 0x" << (int)calcCRC << std::dec << std::endl;
+//                     currentState = MSP_IDLE;
+//                 }
+//                 break;
+//             }
+//             default:
+//                 currentState = MSP_IDLE;
+//                 break;
+//         }
+//     }
+// }
+
+
+
+
 void MspParser::parseData(const char* data, size_t length) {
     for (size_t i = 0; i < length; ++i) {
-        uint16_t byte = static_cast<uint16_t>(data[i]);
+        uint8_t byte = static_cast<uint8_t>(data[i]);
 
         switch (currentState) {
-            case MSP_IDLE: {
+            case MSP_IDLE:
                 if (byte == '$') {
-                    std::cout << "⚡️Початок нового MSP-пакету знайдено: '$'" << std::endl;
                     currentState = MSP_HEADER_START;
+                    headerBuffer.clear();
                     payloadBuffer.clear();
-                    flags = 0;
-                    sizeLSB = 0;
-                    sizeMSB = 0;
-                    cmdLSB = 0;
-                    cmdMSB = 0;
+                    headerBuffer.push_back(byte);
                 }
                 break;
-            }
-            case MSP_HEADER_START: {
-                if (byte == 'X') {
-                    currentState = MSP_HEADER_M;
-                    std::cout << "⚡️Знайдено 'X' після '$'" << std::endl;
-                } else {
-                    currentState = MSP_IDLE;
-                }
-                break;
-            }
-            case MSP_HEADER_M: {
-                if (byte == '>' || byte == '<') {
-                    currentState = MSP_HEADER_ARROW;
-                    payloadBuffer.clear();
-                    payloadBuffer.push_back(byte); // flags
-                    std::cout << "⚡️Знайдено початок MSPv2-пакету: $X" << byte << std::endl;
-                } else {
-                    currentState = MSP_IDLE;
-                }
-                break;
-            }
-            case MSP_HEADER_ARROW: {
-                flags = byte;
-                payloadBuffer.push_back(byte); // sizeLSB
-                currentState = MSP_HEADER_SIZE_LSB;
-                std::cout << "⚡️Флаги MSPv2: 0x" << std::hex << (int)flags << std::dec << std::endl;
-                break;
-            }
-            case MSP_HEADER_SIZE_LSB: {
-                sizeLSB = byte;
-                payloadBuffer.push_back(byte); // sizeMSB
-                currentState = MSP_HEADER_SIZE_MSB;
-                std::cout << "⚡️Розмір payload LSB: " << (int)sizeLSB << std::endl;
-                break;
-            }
-            case MSP_HEADER_SIZE_MSB: {
-                sizeMSB = byte;
-                payloadBuffer.push_back(byte); // cmdLSB
-                currentState = MSP_HEADER_CMD_LSB;
-                std::cout << "⚡️Розмір payload MSB: " << (int)sizeMSB << std::endl;
-                break;
-            }
-            case MSP_HEADER_CMD_LSB: {
-                cmdLSB = byte;
-                payloadBuffer.push_back(byte); // cmdMSB
-                currentState = MSP_HEADER_CMD_MSB;
-                std::cout << "⚡️Команда MSP LSB: 0x" << std::hex << (int)cmdLSB << std::dec << std::endl;
-                break;
-            }
-            case MSP_HEADER_CMD_MSB: {
-                cmdMSB = byte;
-                payloadBuffer.push_back(byte); // payload starts next
-                payloadBytesRead = 0;
-                uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
-                if (payloadSize == 0) {
-                    currentState = MSP_CHECKSUM;
-                    std::cout << "⚡️Payload розмір 0, переходимо до контрольної суми." << std::endl;
-                } else {
-                    currentState = MSP_PAYLOAD;
-                    std::cout << "⚡️Команда MSP MSB: 0x" << std::hex << (int)cmdMSB << std::dec << std::endl;
-                    std::cout << "⚡️Очікуваний розмір payload: " << payloadSize << " байт." << std::endl;
-                }
-                break;
-            }
-            case MSP_PAYLOAD: {
-                payloadBuffer.push_back(byte);
-                ++payloadBytesRead;
-                uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
-                if (payloadBytesRead >= payloadSize) {
-                    currentState = MSP_CHECKSUM;
-                }
-                break;
-            }
-            case MSP_CHECKSUM: {
-                // CRC8-DVB-S2 по всіх байтах після '>'/<' включно до кінця payload (без CRC)
-                uint8_t recvCRC = byte;
-                uint8_t calcCRC = crc8_dvb_s2(payloadBuffer.data(), payloadBuffer.size());
-                uint16_t function = (static_cast<uint16_t>(cmdMSB) << 8) | cmdLSB;
-                uint16_t payloadSize = (static_cast<uint16_t>(sizeMSB) << 8) | sizeLSB;
 
-                if (recvCRC == calcCRC) {
-                    std::cout << "✅ Отримано MSPv2-пакет. Function: 0x" << std::hex << function
-                              << ", Розмір: " << std::dec << payloadSize << std::endl;
-                    // payloadBuffer: [flags, sizeLSB, sizeMSB, cmdLSB, cmdMSB, payload...]
-                    std::vector<uint8_t> mspPayload;
-                    if (payloadSize > 0 && payloadBuffer.size() >= 5 + payloadSize) {
-                        mspPayload.assign(payloadBuffer.begin() + 5, payloadBuffer.begin() + 5 + payloadSize);
-                    }
-                    convertMspToMavlink(mspPayload, function);
-                    currentState = MSP_IDLE;
+            case MSP_HEADER_START:
+                headerBuffer.push_back(byte);
+                if (byte == 'M' || byte == 'X') {
+                    currentState = MSP_HEADER_M;
                 } else {
-                    std::cerr << "❌ Помилка контрольної суми MSPv2! Отримано: 0x" << std::hex << (int)recvCRC
-                              << ", Очікувалося: 0x" << (int)calcCRC << std::dec << std::endl;
                     currentState = MSP_IDLE;
                 }
                 break;
-            }
+
+            case MSP_HEADER_M:
+                headerBuffer.push_back(byte);
+                if (headerBuffer[1] == 'M') {
+                    // MSPv1
+                    if (byte == '<' || byte == '>') {
+                        currentState = MSP_PAYLOAD;
+                        payloadBuffer.clear();
+                    } else {
+                        currentState = MSP_IDLE;
+                    }
+                } else if (headerBuffer[1] == 'X') {
+                    // MSPv2
+                    if (byte == '<' || byte == '>') {
+                        currentState = MSP_PAYLOAD;
+                        payloadBuffer.clear();
+                    } else {
+                        currentState = MSP_IDLE;
+                    }
+                } else {
+                    currentState = MSP_IDLE;
+                }
+                break;
+
+            case MSP_PAYLOAD:
+                payloadBuffer.push_back(byte);
+
+                // MSPv1 parsing
+                if (headerBuffer[1] == 'M') {
+                    if (payloadBuffer.size() >= 3) {
+                        uint8_t size = payloadBuffer[0];
+                        if (payloadBuffer.size() == (size + 3)) {
+                            uint8_t cmd = payloadBuffer[1];
+                            uint8_t calc = size ^ cmd;
+                            for (size_t j = 0; j < size; j++) calc ^= payloadBuffer[2 + j];
+                            uint8_t recv = payloadBuffer.back();
+
+                            std::cout << "MSPv1 frame (size=" << (int)size
+                                      << ", cmd=" << (int)cmd << "): ";
+                            for (auto b : payloadBuffer)
+                                std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
+                            std::cout << std::dec << std::endl;
+
+                            if (recv == calc) {
+                                std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 2,
+                                                                payloadBuffer.end() - 1);
+                                convertMspToMavlink(mspPayload, cmd);
+                            } else {
+                                std::cerr << "❌ MSPv1 checksum error. Got=0x"
+                                          << std::hex << (int)recv
+                                          << " expected=0x" << (int)calc
+                                          << std::dec << std::endl;
+                            }
+                            payloadBuffer.clear();
+                            currentState = MSP_IDLE;
+                        }
+                    }
+                }
+
+                // MSPv2 parsing
+                else if (headerBuffer[1] == 'X') {
+                    if (payloadBuffer.size() >= 5) {
+                        uint8_t flags = payloadBuffer[0];
+                        uint16_t function = payloadBuffer[1] | (payloadBuffer[2] << 8);
+                        uint16_t size = payloadBuffer[3] | (payloadBuffer[4] << 8);
+
+                        size_t totalNeeded = 5 + size + 1; // flags+func(2)+size(2)+payload+crc
+                        if (payloadBuffer.size() == totalNeeded) {
+                            uint8_t calc = crc8_dvb_s2(payloadBuffer.data(), 5 + size);
+                            uint8_t recv = payloadBuffer.back();
+
+                            std::cout << "MSPv2 frame (func=0x" << std::hex << function
+                                      << ", size=" << std::dec << size << "): ";
+                            for (auto b : payloadBuffer)
+                                std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
+                            std::cout << std::dec << std::endl;
+
+                            if (recv == calc) {
+                                std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 5,
+                                                                payloadBuffer.end() - 1);
+                                convertMspToMavlink(mspPayload, function);
+                            } else {
+                                std::cerr << "❌ MSPv2 checksum error. Got=0x"
+                                          << std::hex << (int)recv
+                                          << " expected=0x" << (int)calc
+                                          << std::dec << std::endl;
+                            }
+                            payloadBuffer.clear();
+                            currentState = MSP_IDLE;
+                        }
+                    }
+                }
+
+                break;
+
             default:
                 currentState = MSP_IDLE;
                 break;
