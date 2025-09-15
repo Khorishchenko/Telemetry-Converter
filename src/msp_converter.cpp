@@ -153,7 +153,7 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 uint16_t mahDrawn = (mspPayload[4] | (mspPayload[5] << 8));
                 uint16_t voltages[10] = {voltage, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-                std::cout << "  Парсинг MSP_BATTERY_STATUS: Напруга: " << voltage / 100.0f << " В, Струм: " << current / 10.0f << " A, Спожито: " << mahDrawn << " мАг" << std::endl;
+                std::cout << "  Парсинг " << COLOR_GREEN << " MSP_BATTERY_STATUS:" << COLOR_RESET << " Напруга: " << voltage / 100.0f << " В, Струм: " << current / 10.0f << " A, Спожито: " << mahDrawn << " мАг" << std::endl;
 
                 mavlink_msg_battery_status_pack(1, 1, &mavlink_msg, 1, MAV_BATTERY_FUNCTION_ALL, MAV_BATTERY_TYPE_LIPO, 0, voltages, current, -1, 0, 0, 0, 0, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
@@ -314,6 +314,7 @@ void MspParser::parseData(const char* data, size_t length) {
 
         switch (currentState) {
             case MSP_IDLE:
+                // Очікуємо початок пакета
                 if (byte == '$') {
                     currentState = MSP_HEADER_START;
                     headerBuffer.clear();
@@ -323,6 +324,7 @@ void MspParser::parseData(const char* data, size_t length) {
                 break;
 
             case MSP_HEADER_START:
+                // Збираємо другий байт заголовка ('M' або 'X')
                 headerBuffer.push_back(byte);
                 if (byte == 'M' || byte == 'X') {
                     currentState = MSP_HEADER_M;
@@ -332,6 +334,7 @@ void MspParser::parseData(const char* data, size_t length) {
                 break;
 
             case MSP_HEADER_M:
+                // Збираємо третій байт заголовка ('<' або '>')
                 headerBuffer.push_back(byte);
                 if (headerBuffer[1] == 'M') {
                     // MSPv1
@@ -355,20 +358,23 @@ void MspParser::parseData(const char* data, size_t length) {
                 break;
 
             case MSP_PAYLOAD:
+                // Збираємо payload
                 payloadBuffer.push_back(byte);
 
-                // MSPv1 parsing
+                // MSPv1 парсинг
                 if (headerBuffer[1] == 'M') {
                     if (payloadBuffer.size() >= 3) {
                         uint8_t size = payloadBuffer[0];
                         if (payloadBuffer.size() == (size + 3)) {
                             uint8_t cmd = payloadBuffer[1];
                             uint8_t calc = size ^ cmd;
-                            for (size_t j = 0; j < size; j++) calc ^= payloadBuffer[2 + j];
+                            for (size_t j = 0; j < size; j++)
+                                calc ^= payloadBuffer[2 + j];
                             uint8_t recv = payloadBuffer.back();
 
-                            std::cout << "MSPv1 frame (size=" << (int)size
-                                      << ", cmd=" << (int)cmd << "): ";
+                            std::cout << "✅ Отримано MSPv1-пакет. Команда: 0x" << std::hex << (int)cmd
+                                      << ", Розмір: " << std::dec << (int)size << std::endl;
+                            std::cout << "  Вміст (HEX): ";
                             for (auto b : payloadBuffer)
                                 std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
                             std::cout << std::dec << std::endl;
@@ -378,9 +384,9 @@ void MspParser::parseData(const char* data, size_t length) {
                                                                 payloadBuffer.end() - 1);
                                 convertMspToMavlink(mspPayload, cmd);
                             } else {
-                                std::cerr << "❌ MSPv1 checksum error. Got=0x"
+                                std::cerr << "❌ Помилка контрольної суми MSPv1! Отримано: 0x"
                                           << std::hex << (int)recv
-                                          << " expected=0x" << (int)calc
+                                          << ", Очікувалось: 0x" << (int)calc
                                           << std::dec << std::endl;
                             }
                             payloadBuffer.clear();
@@ -388,8 +394,7 @@ void MspParser::parseData(const char* data, size_t length) {
                         }
                     }
                 }
-
-                // MSPv2 parsing
+                // MSPv2 парсинг
                 else if (headerBuffer[1] == 'X') {
                     if (payloadBuffer.size() >= 5) {
                         uint8_t flags = payloadBuffer[0];
@@ -401,8 +406,9 @@ void MspParser::parseData(const char* data, size_t length) {
                             uint8_t calc = crc8_dvb_s2(payloadBuffer.data(), 5 + size);
                             uint8_t recv = payloadBuffer.back();
 
-                            std::cout << "MSPv2 frame (func=0x" << std::hex << function
-                                      << ", size=" << std::dec << size << "): ";
+                            std::cout << "✅ Отримано MSPv2-пакет. Функція: 0x" << std::hex << function
+                                      << ", Розмір: " << std::dec << size << std::endl;
+                            std::cout << "  Вміст (HEX): ";
                             for (auto b : payloadBuffer)
                                 std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
                             std::cout << std::dec << std::endl;
@@ -412,9 +418,9 @@ void MspParser::parseData(const char* data, size_t length) {
                                                                 payloadBuffer.end() - 1);
                                 convertMspToMavlink(mspPayload, function);
                             } else {
-                                std::cerr << "❌ MSPv2 checksum error. Got=0x"
+                                std::cerr << "❌ Помилка контрольної суми MSPv2! Отримано: 0x"
                                           << std::hex << (int)recv
-                                          << " expected=0x" << (int)calc
+                                          << ", Очікувалось: 0x" << (int)calc
                                           << std::dec << std::endl;
                             }
                             payloadBuffer.clear();
@@ -422,7 +428,6 @@ void MspParser::parseData(const char* data, size_t length) {
                         }
                     }
                 }
-
                 break;
 
             default:
