@@ -51,16 +51,27 @@ int setupSerial(const std::string& port, int baudrate) {
     tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
     tty.c_iflag &= ~(IXON | IXOFF | IXANY);
     tty.c_oflag &= ~OPOST;
+    // Керуємо поведінкою читання: мін. 1 байт або таймаут 100мс
+    tty.c_cc[VMIN] = 1;
+    tty.c_cc[VTIME] = 1; // 0.1s
     if (tcsetattr(fd, TCSANOW, &tty) != 0) {
         std::cerr << COLOR_RED << "Помилка: не вдалося встановити атрибути послідовного порту." << COLOR_RESET << std::endl;
         close(fd);
         return -1;
     }
+    // Очистити буфери після налаштування
+    tcflush(fd, TCIOFLUSH);
     return fd;
 }
 
 int main() {
     std::cout << COLOR_GREEN << "Запуск програми-конвертера телеметрії MSP-MAVLink..." << COLOR_RESET << std::endl;
+
+    // Отримуємо конфігурацію телеметрії
+    const TelemetryConfig& cfg = getTelemetryConfig();
+    std::cout << "Конфігурація: SYSID=" << static_cast<int>(cfg.sysid)
+              << ", COMPID=" << static_cast<int>(cfg.compid)
+              << ", UDP=" << cfg.udp_ip << ":" << cfg.udp_port << std::endl;
 
     const char* serialPort = "/dev/serial0";
     int fd = setupSerial(serialPort, 115200);
@@ -99,6 +110,9 @@ int main() {
             sendMspV2Request(fd, MSP_RC);
             sendMspV2Request(fd, MSP_ATTITUDE);
             sendMspV2Request(fd, MSP_BATTERY_STATUS);
+            sendMspV2Request(fd, MSP_RAW_GPS);
+            sendMspV2Request(fd, MSP_SERVO);
+            sendMspV2Request(fd, MSP_MOTOR);
             lastRequest = now;
         }
     }

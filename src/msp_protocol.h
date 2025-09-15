@@ -11,12 +11,16 @@
 #define MSP_RAW_GPS               106
 #define MSP_BATTERY_STATUS        107
 #define MSP_ATTITUDE              108
+#define MSP_SERVO                 103
+#define MSP_MOTOR                 104
 
 #define MSP_STATUS_EX             150
 #define MSP_UID                   160
 
 #define MSP_BATTERY_STATE         0x010B
 #define MSP_RC_EXTENDED           0x0105
+#define MSP_SERVO_EXTENDED        0x0103
+#define MSP_MOTOR_EXTENDED        0x0104
 
 // --- Кольори для консолі (ANSI escape codes) ---
 #define COLOR_RESET   "\033[0m"

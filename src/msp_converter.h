@@ -14,6 +14,16 @@ void printHexBuffer(const uint8_t* buffer, uint16_t length);
 void writeToFile(const std::string& filename, const uint8_t* buffer, uint16_t length);
 void sendMavlinkPacketOverUdp(const uint8_t* buffer, uint16_t length, const std::string& ip_address, int port);
 
+// Конфігурація телеметрії (читання з env)
+struct TelemetryConfig {
+    uint8_t sysid;
+    uint8_t compid;
+    std::string udp_ip;
+    int udp_port;
+};
+
+const TelemetryConfig& getTelemetryConfig();
+
 
 // клас для парсингу MSP-пакетів
 class MspParser {

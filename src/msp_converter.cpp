@@ -12,8 +12,9 @@
 #include <cstring>
 #include <unistd.h>
 #include <termios.h>
+#include <chrono>
 
-
+// Максимальний розмір пакета MAVLink
 // CRC-8/DVB-S2 (poly=0xD5, init=0x00, no reflection, xorout=0x00)
 uint8_t crc8_dvb_s2(const uint8_t* data, size_t len) {
     uint8_t crc = 0x00;
@@ -92,8 +93,38 @@ void sendMspV2Request(int fd, uint16_t function) {
     tcdrain(fd);
 }
 
+// Функція для отримання конфігурації телеметрії з змінних оточення
+const TelemetryConfig& getTelemetryConfig() {
+    static bool inited = false;
+    static TelemetryConfig cfg{};
+    if (!inited) {
+        cfg.sysid = 1;
+        cfg.compid = 1;
+        cfg.udp_ip = "127.0.0.1";
+        cfg.udp_port = 14550;
+        if (const char* v = std::getenv("TC_SYSID")) {
+            int t = std::atoi(v);
+            if (t >= 1 && t <= 255) cfg.sysid = static_cast<uint8_t>(t);
+        }
+        if (const char* v = std::getenv("TC_COMPID")) {
+            int t = std::atoi(v);
+            if (t >= 1 && t <= 255) cfg.compid = static_cast<uint8_t>(t);
+        }
+        if (const char* v = std::getenv("TC_UDP_IP")) {
+            if (std::strlen(v) > 0) cfg.udp_ip = v;
+        }
+        if (const char* v = std::getenv("TC_UDP_PORT")) {
+            int t = std::atoi(v);
+            if (t > 0 && t <= 65535) cfg.udp_port = t;
+        }
+        inited = true;
+    }
+    return cfg;
+}
+
 // Функція для конвертації MSP-пакету у MAVLink-пакет а також парсинг деяких MSP-повідомлень
 void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t commandCode) {
+    const TelemetryConfig& cfg = getTelemetryConfig();
     mavlink_message_t mavlink_msg;
     uint8_t buf[MAVLINK_MAX_PACKET_LEN];
     uint16_t len;
@@ -108,16 +139,22 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 uint8_t numSat = mspPayload[14];
                 uint8_t fixType = mspPayload[15];
 
-                std::cout << "  Парсинг MSP_RAW_GPS: Широта: " << lat / 10000000.0 << "°, Довгота: " << lon / 10000000.0 << "°, Висота: " << alt / 100.0f << " м" << std::endl;
+                std::cout << "  Парсинг " << COLOR_YELLOW << " MSP_RAW_GPS: " << COLOR_RESET <<  " Широта: " << lat / 10000000.0 << "°, Довгота: " << lon / 10000000.0 << "°, Висота: " << alt / 100.0f << " м" << std::endl;
                 std::cout << "  Швидкість: " << speed / 100.0f << " м/с, Супутників: " << static_cast<int>(numSat) << ", Фікс: " << static_cast<int>(fixType) << std::endl;
 
-                mavlink_msg_gps_raw_int_pack(1, 1, &mavlink_msg, 0, fixType, lat, lon, alt, 0, 0, speed, 0, numSat, 0, 0, 0, 0, 0, 0);
+                // MAVLink очікує висоту у міліметрах; MSP зазвичай віддає у санти-метрах
+                int32_t alt_mm = alt * 10;
+                // Час у мікросекундах від епохи
+                uint64_t time_usec = std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::system_clock::now().time_since_epoch()).count();
+
+                mavlink_msg_gps_raw_int_pack(cfg.sysid, cfg.compid, &mavlink_msg, time_usec, fixType, lat, lon, alt_mm, 0, 0, speed, 0, numSat, 0, 0, 0, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
 
                 std::cout << "  Згенеровано MAVLink GPS_RAW_INT-пакет. Розмір: " << len << " байт." << std::endl;
                 printHexBuffer(buf, len);
                 writeToFile("msp_telemetry.bin", buf, len);
-                sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
+                sendMavlinkPacketOverUdp(buf, len, cfg.udp_ip, cfg.udp_port);
             }
             break;
         case MSP_ATTITUDE:
@@ -129,14 +166,14 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 float pitch_rad = pitch * (M_PI / 1800.0f);
                 float yaw_rad = yaw * (M_PI / 1800.0f);
 
-                std::cout << "  Парсинг " << COLOR_YELLOW << " MSP_ATTITUDE: " << COLOR_RESET << "Крен: " << roll / 10.0f << "°, Тангаж: " << pitch / 10.0f << "°, Курс: " << yaw << "°" << std::endl;
+                std::cout << "  Парсинг " << COLOR_YELLOW << " MSP_ATTITUDE: " << COLOR_RESET << "Крен: " << roll / 10.0f << "°, Тангаж: " << pitch / 10.0f << "°, Курс: " << yaw / 10.0f << "°" << std::endl;
 
-                mavlink_msg_attitude_pack(1, 1, &mavlink_msg, 0, roll_rad, pitch_rad, yaw_rad, 0, 0, 0);
+                mavlink_msg_attitude_pack(cfg.sysid, cfg.compid, &mavlink_msg, 0, roll_rad, pitch_rad, yaw_rad, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
                 std::cout << "  Згенеровано MAVLink ATTITUDE-пакет. Розмір: " << len << " байт." << std::endl;
                 printHexBuffer(buf, len);
                 writeToFile("msp_telemetry.bin", buf, len);
-                sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
+                sendMavlinkPacketOverUdp(buf, len, cfg.udp_ip, cfg.udp_port);
             }
             break;
         case MSP_RC:
@@ -150,12 +187,12 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                     std::cout << "CH" << i + 1 << ": " << channels[i] << "  ";
                 std::cout << std::endl;
 
-                mavlink_msg_rc_channels_pack(1, 1, &mavlink_msg, 0, 8, channels[0], channels[1], channels[2], channels[3], channels[4], channels[5], channels[6], channels[7], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+                mavlink_msg_rc_channels_pack(cfg.sysid, cfg.compid, &mavlink_msg, 0, 8, channels[0], channels[1], channels[2], channels[3], channels[4], channels[5], channels[6], channels[7], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
                 std::cout << "  Згенеровано MAVLink RC_CHANNELS-пакет. Розмір: " << len << " байт." << std::endl;
                 printHexBuffer(buf, len);
                 writeToFile("msp_telemetry.bin", buf, len);
-                sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
+                sendMavlinkPacketOverUdp(buf, len, cfg.udp_ip, cfg.udp_port);
             }
             break;
         case MSP_BATTERY_STATUS:
@@ -163,17 +200,61 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 uint16_t voltage = (mspPayload[0] | (mspPayload[1] << 8));
                 int16_t current = (mspPayload[2] | (mspPayload[3] << 8));
                 uint16_t mahDrawn = (mspPayload[4] | (mspPayload[5] << 8));
-                uint16_t voltages[10] = {voltage, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+                // MAVLink очікує мВ по комірках; якщо є тільки загальна, кладемо у перший елемент
+                uint16_t voltages[10] = {static_cast<uint16_t>(voltage * 10), 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
                 std::cout << "  Парсинг " << COLOR_YELLOW << " MSP_BATTERY_STATUS:" << COLOR_RESET << " Напруга: " << voltage / 100.0f << " В, Струм: " << current / 10.0f << " A, Спожито: " << mahDrawn << " мАг" << std::endl;
 
-                mavlink_msg_battery_status_pack(1, 1, &mavlink_msg, 1, MAV_BATTERY_FUNCTION_ALL, MAV_BATTERY_TYPE_LIPO, 0, voltages, current, -1, 0, 0, 0, 0, 0, 0, 0);
+                // current_battery в cA (0.01A). Якщо MSP дає 0.1A, множимо на 10. current_consumed в mAh
+                int16_t current_cA = static_cast<int16_t>(current * 10);
+                int32_t current_consumed = static_cast<int32_t>(mahDrawn);
+                mavlink_msg_battery_status_pack(cfg.sysid, cfg.compid, &mavlink_msg, 1, MAV_BATTERY_FUNCTION_ALL, MAV_BATTERY_TYPE_LIPO, 0, voltages, current_cA, current_consumed, 0, -1, 0, 0, 0, 0, 0);
                 len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
 
                 std::cout << "  Згенеровано MAVLink BATTERY_STATUS-пакет. Розмір: " << len << " байт." << std::endl;
                 printHexBuffer(buf, len);
                 writeToFile("msp_telemetry.bin", buf, len);
-                sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
+                sendMavlinkPacketOverUdp(buf, len, cfg.udp_ip, cfg.udp_port);
+            }
+            break;
+        case MSP_SERVO_EXTENDED:
+            if (mspPayload.size() >= 16) { // 8 каналів по 2 байти
+                std::vector<uint16_t> servos(8);
+                for (size_t i = 0; i < 8; ++i)
+                    servos[i] = (mspPayload[i * 2] | (mspPayload[i * 2 + 1] << 8));
+                std::cout << "  Парсинг " << COLOR_YELLOW << " MSP_SERVO: " << COLOR_RESET;
+                for (size_t i = 0; i < 8; ++i)
+                    std::cout << "SERVO" << i + 1 << ": " << servos[i] << "  ";
+                std::cout << std::endl;
+           
+
+                mavlink_msg_servo_output_raw_pack(cfg.sysid, cfg.compid, &mavlink_msg, 0, 0,
+                                                  servos[0], servos[1], servos[2], servos[3],
+                                                  servos[4], servos[5], servos[6], servos[7], 0, 0, 0, 0, 0, 0, 0, 0);
+                len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
+                printHexBuffer(buf, len);
+                writeToFile("msp_telemetry.bin", buf, len);
+                sendMavlinkPacketOverUdp(buf, len, cfg.udp_ip, cfg.udp_port);
+            }
+            break;
+        case MSP_MOTOR:
+        case MSP_MOTOR_EXTENDED:
+            if (mspPayload.size() >= 16) { // 8 моторів по 2 байти
+                std::vector<uint16_t> motors(8);
+                for (size_t i = 0; i < 8; ++i)
+                    motors[i] = (mspPayload[i * 2] | (mspPayload[i * 2 + 1] << 8));
+                std::cout << "  Парсинг " << COLOR_YELLOW << " MSP_MOTOR: " << COLOR_RESET;
+                for (size_t i = 0; i < 8; ++i)
+                    std::cout << "MOTOR" << i + 1 << ": " << motors[i] << "  ";
+                std::cout << std::endl;
+                // Тут можна додати відправку через MAVLink, наприклад, через mavlink_msg_servo_output_raw_pack
+                mavlink_msg_servo_output_raw_pack(cfg.sysid, cfg.compid, &mavlink_msg, 0, 1,
+                                                  motors[0], motors[1], motors[2], motors[3],
+                                                  motors[4], motors[5], motors[6], motors[7], 0, 0, 0, 0, 0, 0, 0, 0);
+                len = mavlink_msg_to_send_buffer(buf, &mavlink_msg);
+                printHexBuffer(buf, len);
+                writeToFile("msp_telemetry.bin", buf, len);
+                sendMavlinkPacketOverUdp(buf, len, cfg.udp_ip, cfg.udp_port);
             }
             break;
         default:
