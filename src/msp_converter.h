@@ -35,8 +35,7 @@ private:
     uint8_t dataSize;
     uint8_t checksum;
 
-    // Ось тут додаємо змінні для заголовка та розміру
-    uint8_t flags;       // перший байт після "$M>"
+    uint8_t flags;       // перший байт після "$M>" || "<"
     uint8_t cmdLSB;      // function LSB
     uint8_t cmdMSB;      // function MSB
     uint8_t sizeLSB;     // LSB розміру payload

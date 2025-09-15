@@ -126,8 +126,8 @@ int main() {
         // ⏱️ Надсилаємо запити кожні 100 мс
         auto now = std::chrono::steady_clock::now();
         if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastRequest).count() > 100) {
-            // sendMspV2Request(fd, MSP_RC); // MSP_RC
-            // sendMspV2Request(fd, MSP_ATTITUDE); // MSP_ATTITUDE
+            sendMspV2Request(fd, MSP_RC); // MSP_RC
+            sendMspV2Request(fd, MSP_ATTITUDE); // MSP_ATTITUDE
             sendMspV2Request(fd, MSP_BATTERY_STATUS); // MSP_BATTERY_STATUS
             lastRequest = now;
         }

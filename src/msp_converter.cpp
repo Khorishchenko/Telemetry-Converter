@@ -165,14 +165,6 @@ void convertMspToMavlink(const std::vector<uint8_t>& mspPayload, uint16_t comman
                 sendMavlinkPacketOverUdp(buf, len, "127.0.0.1", 14550);
             }
             break;
-        case 0x1208:
-            std::cout << "Отримano MSPv2 пакет 0x1208. Розмір: " << mspPayload.size() << " байт." << std::endl;
-            std::cout << "Вміст mspPayload (HEX): ";
-            for (size_t i = 0; i < mspPayload.size(); ++i) {
-                std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(mspPayload[i]) << " ";
-            }
-            std::cout << std::dec << std::endl;
-            break;
         default:
             std::cout << "  Невідомий тип MSP-повідомлення: 0x" << std::hex << (int)commandCode << std::endl;
             std::cout << "  Payload (" << std::dec << mspPayload.size() << " байт): ";
@@ -336,23 +328,15 @@ void MspParser::parseData(const char* data, size_t length) {
             case MSP_HEADER_M:
                 // Збираємо третій байт заголовка ('<' або '>')
                 headerBuffer.push_back(byte);
-                if (headerBuffer[1] == 'M') {
-                    // MSPv1
-                    if (byte == '<' || byte == '>') {
-                        currentState = MSP_PAYLOAD;
-                        payloadBuffer.clear();
-                    } else {
-                        currentState = MSP_IDLE;
-                    }
-                } else if (headerBuffer[1] == 'X') {
-                    // MSPv2
-                    if (byte == '<' || byte == '>') {
-                        currentState = MSP_PAYLOAD;
-                        payloadBuffer.clear();
-                    } else {
-                        currentState = MSP_IDLE;
-                    }
+                if ((headerBuffer[1] == 'M' || headerBuffer[1] == 'X') && (byte == '<' || byte == '>')) {
+                    // MSPv1 або MSPv2: правильний заголовок
+                    currentState = MSP_PAYLOAD;
+                    payloadBuffer.clear();
+                } else if (headerBuffer[1] == 'M' || headerBuffer[1] == 'X') {
+                    // MSPv1 або MSPv2: неправильний символ після 'M'/'X'
+                    currentState = MSP_IDLE;
                 } else {
+                    // Не MSP-пакет
                     currentState = MSP_IDLE;
                 }
                 break;
@@ -374,10 +358,6 @@ void MspParser::parseData(const char* data, size_t length) {
 
                             std::cout << "✅ Отримано MSPv1-пакет. Команда: 0x" << std::hex << (int)cmd
                                       << ", Розмір: " << std::dec << (int)size << std::endl;
-                            std::cout << "  Вміст (HEX): ";
-                            for (auto b : payloadBuffer)
-                                std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
-                            std::cout << std::dec << std::endl;
 
                             if (recv == calc) {
                                 std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 2,
@@ -408,10 +388,6 @@ void MspParser::parseData(const char* data, size_t length) {
 
                             std::cout << "✅ Отримано MSPv2-пакет. Функція: 0x" << std::hex << function
                                       << ", Розмір: " << std::dec << size << std::endl;
-                            std::cout << "  Вміст (HEX): ";
-                            for (auto b : payloadBuffer)
-                                std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
-                            std::cout << std::dec << std::endl;
 
                             if (recv == calc) {
                                 std::vector<uint8_t> mspPayload(payloadBuffer.begin() + 5,
@@ -429,7 +405,6 @@ void MspParser::parseData(const char* data, size_t length) {
                     }
                 }
                 break;
-
             default:
                 currentState = MSP_IDLE;
                 break;
