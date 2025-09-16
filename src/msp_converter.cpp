@@ -50,7 +50,7 @@ void writeToFile(const std::string& filename, const uint8_t* buffer, uint16_t le
     if (outfile.is_open()) {
         outfile.write(reinterpret_cast<const char*>(buffer), length);
         outfile.close();
-        std::cout << "Запис у файл: " << length << " байт." << std::endl;
+        std::cout << "  Записано " << length << " байт у файл " << filename << std::endl;
     } else {
         std::cerr << COLOR_RED << "Помилка: не вдалося відкрити файл для запису: " << filename << COLOR_RESET << std::endl;
     }
